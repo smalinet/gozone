@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  gozone:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - GOZONE_SECRET_KEY=change-me-to-a-random-secret-in-production
+      - GOZONE_ADMIN_PASSWORD=admin
+      - GOZONE_PDNS_API_URL=http://powerdns:8081
+      - GOZONE_PDNS_API_KEY=changeme
+    volumes:
+      - gozone_data:/app/data
+    restart: unless-stopped
+
+  powerdns:
+    image: powerdns/pdns-auth-master:latest
+    ports:
+      - "53:53"
+      - "53:53/udp"
+      - "8081:8081"
+    environment:
+      - PDNS_auth_api=yes
+      - PDNS_api_key=changeme
+      - PDNS_webserver=yes
+      - PDNS_webserver_address=0.0.0.0
+      - PDNS_webserver_allow_from=0.0.0.0/0
+      - PDNS_webserver_port=8081
+      - PDNS_default_ttl=3600
+    restart: unless-stopped
+
+volumes:
+  gozone_data:
