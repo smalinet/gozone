@@ -20,7 +20,7 @@
 | `just test` | `go test ./...` |
 | `just fmt` / `just vet` | Format / vet |
 
-No tests exist yet — write co-located `*_test.go` when adding code.
+Write co-located `*_test.go` when adding code.
 
 ## Architecture
 
