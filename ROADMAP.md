@@ -85,7 +85,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Disabled user rejected
   - `loadUser()`: success, error, enabled conversion
 
-- [ ] **Fix and test DynDNS completely** (`internal/dyndns/dyndns_test.go`)
+- [x] **Fix and test DynDNS completely** (`internal/dyndns/dyndns_test.go`)
   - Add in-memory database with bcrypt-hashed users to `setupTestHandler()`
   - Test complete flow: auth → validateUser → findZone → updateRecord → "good"
   - Test `validateUser()`: success, user not found, wrong password, disabled user
