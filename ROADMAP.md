@@ -49,7 +49,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Use standardized error codes (e.g., `{"error": "zone_not_found", "code": "ZONE_001"}`)
 
 ### Data Security
-- [ ] **Verify password hashes never leak**
+- [x] **Verify password hashes never leak**
   - Test that `json:"-"` works on `PasswordHash` and `KeyHash`
   - Add JSON serialization tests for all models
   - Check logs to ensure no hashes are logged

@@ -234,6 +234,6 @@ func seedAdminUser(db *database.DB, cfg *config.Config) {
 		return
 	}
 
-	log.Printf("[gozone] seeded admin user (username: %s, password: %s)", username, password)
+	log.Printf("[gozone] seeded admin user (username: %s)", username)
 	log.Printf("[gozone] CHANGE THE DEFAULT PASSWORD IMMEDIATELY!")
 }
