@@ -95,7 +95,7 @@ database   ──► config
 3. **`database.New(cfg)`** — validate DSN, create directory, open SQLite connection (`SetMaxOpenConns(1)`), run inline migrations
 4. **`pdns.NewClient(cfg)`** — create HTTP client pointing to PowerDNS API
 5. **`seedAdminUser(db, cfg)`** — if `users` table is empty, insert admin/admin (or password from `GOZONE_ADMIN_PASSWORD`)
-6. **`parseTemplates()`** — load `web/templates/*.html` via `template.ParseGlob`
+6. **`parseTemplates()`** — load `cmd/gozone/templates/*.html` via `template.ParseFS` from embedded filesystem
 7. **`handlers.New(db, pdns, cfg, tmpl)`** — wire handler with all dependencies
 8. **Register routes** on chi router with middleware chain
 9. **`http.ListenAndServe(addr, r)`** — start HTTP server with graceful shutdown on SIGINT/SIGTERM
@@ -286,9 +286,9 @@ All SQL queries are hand-written and inlined in handler methods. This avoids ORM
 
 All HTTP handlers are methods on a single `Handler` struct holding shared dependencies (`DB`, `PDNS`, `Cfg`, `Tmpl`). This avoids passing dependencies through middleware or global state. The struct is created once at startup and shared across all routes.
 
-### html/template (Not embed)
+### html/template (Embedded with //go:embed)
 
-Templates are loaded from disk at startup via `template.ParseGlob`. This enables hot-reload during development (restart server) without recompilation. The trade-off is that templates are not embedded in the binary, so the `web/templates/` directory must be present at runtime.
+Templates are embedded in the binary at compile time via `//go:embed` and loaded via `template.ParseFS`. This simplifies deployment to a single binary with no external template files required.
 
 ### JWT for Web Sessions
 

@@ -131,7 +131,7 @@ internal/handlers/        HTTP handlers (web UI + REST API)
 internal/middleware/       JWT auth, API key auth, admin guard
 internal/models/          Shared data structures
 internal/pdns/            PowerDNS REST API client
-web/templates/            Go HTML templates
+cmd/gozone/templates/     Embedded Go HTML templates
 web/static/               CSS, JavaScript
 ```
 

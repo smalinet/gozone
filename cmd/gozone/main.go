@@ -4,13 +4,13 @@
 package main
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"html/template"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
@@ -25,6 +25,9 @@ import (
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/pdns"
 )
+
+//go:embed templates/*.html
+var templateFS embed.FS
 
 func main() {
 	configPath := flag.String("config", "config.yaml", "Path to YAML configuration file")
@@ -199,15 +202,14 @@ func fileServer(r chi.Router, path string, root http.Dir) {
 	})
 }
 
-// parseTemplates loads all HTML templates from the web/templates directory.
+// parseTemplates loads all HTML templates from the embedded filesystem.
 func parseTemplates() *template.Template {
-	pattern := filepath.Join("web", "templates", "*.html")
 	tmpl, err := template.New("base").Funcs(template.FuncMap{
 		"eq": func(a, b interface{}) bool { return a == b },
 		"ne": func(a, b interface{}) bool { return a != b },
-	}).ParseGlob(pattern)
+	}).ParseFS(templateFS, "templates/*.html")
 	if err != nil {
-		logger.Fatal("failed to parse templates", "error", err)
+		logger.Fatal("failed to load embedded templates", "error", err)
 	}
 	logger.Info("templates loaded", "count", len(tmpl.Templates()))
 	return tmpl

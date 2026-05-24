@@ -229,7 +229,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   }
   ```
 
-- [ ] **Embed templates with `//go:embed`** (`cmd/gozone/main.go:169-180`)
+- [x] **Embed templates with `//go:embed`** (`cmd/gozone/main.go:169-180`)
   - Add `//go:embed web/templates/*.html` to `main.go`
   - Use `embed.FS` to load templates
   - Eliminate startup parsing
@@ -252,7 +252,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Invalidate cache on create/update/delete
 
 ### Template Optimizations
-- [ ] **Cache parsed templates**
+- [x] **Cache parsed templates**
   - Currently parsed on every startup
   - Use `sync.Once` to parse once
   - Or use `//go:embed` (see above)
