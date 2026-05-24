@@ -81,7 +81,12 @@ func main() {
 		csrf.Secure(false), // set true in production with HTTPS
 		csrf.Path("/"),
 		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "CSRF token validation failed", http.StatusForbidden)
+			logger.Warn("CSRF validation failed",
+				"reason", csrf.FailureReason(r),
+				"method", r.Method,
+				"path", r.URL.Path,
+			)
+			http.Redirect(w, r, "/login?error=csrf_invalid", http.StatusSeeOther)
 		})),
 	)
 
@@ -92,6 +97,14 @@ func main() {
 
 	// CSRF-protected web UI routes (login + authenticated)
 	r.Group(func(r chi.Router) {
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+					r = csrf.PlaintextHTTPRequest(r)
+				}
+				next.ServeHTTP(w, r)
+			})
+		})
 		r.Use(csrfMiddleware)
 
 		// Public routes
