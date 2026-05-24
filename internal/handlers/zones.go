@@ -10,7 +10,7 @@ import (
 	"github.com/babykart/gozone/internal/models"
 )
 
-// ListZones displays all zones.
+// ListZones renders the zones listing page with record counts per zone (GET /zones).
 func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
@@ -45,7 +45,7 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "zones.html", data)
 }
 
-// CreateZonePage displays the zone creation form.
+// CreateZonePage renders the zone creation form (GET /zones/new).
 func (h *Handler) CreateZonePage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	data := map[string]interface{}{
@@ -56,7 +56,10 @@ func (h *Handler) CreateZonePage(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "zone_create.html", data)
 }
 
-// CreateZone handles zone creation.
+// CreateZone creates a new PowerDNS zone from form data (POST /zones/create).
+//
+// Requires admin role. The zone name, kind, and optional comma-separated
+// nameservers are submitted via form values.
 func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	if !user.IsAdmin() {
@@ -110,7 +113,9 @@ func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones", http.StatusSeeOther)
 }
 
-// DeleteZone handles zone deletion.
+// DeleteZone deletes a zone by zone_id form value (POST /zones/delete).
+//
+// Requires admin role.
 func (h *Handler) DeleteZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	if !user.IsAdmin() {
@@ -142,7 +147,8 @@ func (h *Handler) DeleteZone(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones", http.StatusSeeOther)
 }
 
-// ViewZone displays a zone with its records.
+// ViewZone renders a zone detail page with its records, activity logs, and
+// PowerDNS version (GET /zones/{zone_id}).
 func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -182,7 +188,9 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "zone_view.html", data)
 }
 
-// RectifyZone triggers DNSSEC rectification.
+// RectifyZone triggers DNSSEC rectification for a zone (POST /zones/{zone_id}/rectify).
+//
+// Requires admin role. After rectification, redirects back to the zone view.
 func (h *Handler) RectifyZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	if !user.IsAdmin() {
@@ -204,7 +212,9 @@ func (h *Handler) RectifyZone(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
 }
 
-// NotifyZone sends NOTIFY to slaves.
+// NotifyZone sends a NOTIFY message to slave servers for a zone (POST /zones/{zone_id}/notify).
+//
+// Requires admin role. Redirects back to the zone view after completion.
 func (h *Handler) NotifyZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	if !user.IsAdmin() {

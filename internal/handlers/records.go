@@ -10,7 +10,7 @@ import (
 	"github.com/babykart/gozone/internal/models"
 )
 
-// CreateRecordPage displays the record creation form.
+// CreateRecordPage renders the record creation form for a zone (GET /zones/{zone_id}/records/new).
 func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -30,7 +30,9 @@ func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "record_create.html", data)
 }
 
-// CreateRecord handles record creation.
+// CreateRecord creates a DNS record in a zone from form data (POST /zones/{zone_id}/records/create).
+//
+// Accepts name, type, content, ttl, and priority form values. Defaults TTL to 3600.
 func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -87,7 +89,9 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
 }
 
-// EditRecordPage displays the record edit form.
+// EditRecordPage renders the record edit form (GET /zones/{zone_id}/records/edit?name=...&type=...).
+//
+// The record to edit is identified by the "name" and "type" query parameters.
 func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -131,7 +135,10 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "record_edit.html", data)
 }
 
-// UpdateRecord handles record updates.
+// UpdateRecord replaces a DNS record in a zone from form data (POST /zones/{zone_id}/records/update).
+//
+// Uses the REPLACE changetype to ensure idempotent updates. Accepts name, type,
+// content, ttl, priority, and disabled form values.
 func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -184,7 +191,9 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
 }
 
-// DeleteRecord handles record deletion.
+// DeleteRecord deletes a DNS record from a zone (POST /zones/{zone_id}/records/delete).
+//
+// Identifies the record by "name" and "type" form values.
 func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")

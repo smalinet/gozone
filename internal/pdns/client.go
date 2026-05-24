@@ -1,3 +1,8 @@
+// Package pdns provides a client for the PowerDNS Authoritative Server REST API.
+//
+// The Client wraps HTTP calls to the /api/v1 endpoints exposed by PowerDNS,
+// supporting zone and record management (CRUD), DNSSEC rectification, and
+// slave notification.
 package pdns
 
 import (
@@ -22,7 +27,10 @@ type Client struct {
 	http     *http.Client
 }
 
-// NewClient creates a new PowerDNS API client.
+// NewClient creates a new PowerDNS API client from configuration.
+//
+// It normalizes the API URL to ensure it ends with "/api/v1" and configures
+// an HTTP client with a 30-second request timeout.
 func NewClient(cfg *config.PowerDNSConfig) *Client {
 	baseURL := strings.TrimRight(cfg.APIURL, "/")
 	if !strings.HasSuffix(baseURL, "api/v1") {

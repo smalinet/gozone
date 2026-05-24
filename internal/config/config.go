@@ -1,3 +1,6 @@
+// Package config handles YAML configuration loading with environment variable
+// overrides. It provides DefaultConfig to bootstrap sensible defaults and Load
+// to read a config file and apply GOZONE_*-prefixed env var overrides.
 package config
 
 import (
@@ -46,7 +49,10 @@ type LoggingConfig struct {
 	Level string `yaml:"level"`
 }
 
-// DefaultConfig returns a Config with sensible defaults.
+// DefaultConfig returns a Config populated with sensible development defaults.
+//
+// The default admin credentials are admin/admin. Override via the YAML config
+// file or environment variables in production.
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -73,9 +79,21 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Load reads a YAML config file and returns a Config.
-// It applies defaults first, then overlays values from the file.
-// Environment variables override file values (GOZONE_ prefix).
+// Load reads a YAML config file and returns a populated Config.
+//
+// Processing order:
+//  1. Start with DefaultConfig() values
+//  2. Overlay values from the YAML file at path (if it exists)
+//  3. Apply environment variable overrides using the GOZONE_ prefix
+//
+// Supported environment variables: GOZONE_SERVER_HOST, GOZONE_SERVER_PORT,
+// GOZONE_SECRET_KEY, GOZONE_DB_DRIVER, GOZONE_DB_DSN, GOZONE_PDNS_API_URL,
+// GOZONE_PDNS_API_KEY, GOZONE_PDNS_SERVER_ID, GOZONE_SESSION_DURATION.
+//
+// Parameters:
+//   - path: filesystem path to the YAML configuration file
+//
+// Returns the merged configuration or an error if parsing fails.
 func Load(path string) (*Config, error) {
 	cfg := DefaultConfig()
 

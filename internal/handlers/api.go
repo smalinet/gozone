@@ -7,9 +7,9 @@ import (
 	"github.com/babykart/gozone/internal/models"
 )
 
-// --- Zone API ---
+// -- Zone API ---
 
-// APIListZones returns all zones as JSON.
+// APIListZones returns all PowerDNS zones as a JSON array (GET /api/v1/zones).
 func (h *Handler) APIListZones(w http.ResponseWriter, r *http.Request) {
 	zones, err := h.PDNS.ListZones()
 	if err != nil {
@@ -22,7 +22,7 @@ func (h *Handler) APIListZones(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, zones)
 }
 
-// APIGetZone returns a single zone as JSON.
+// APIGetZone returns a single zone by zone_id as JSON (GET /api/v1/zones/{zone_id}).
 func (h *Handler) APIGetZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	zone, err := h.PDNS.GetZone(zoneID)
@@ -33,7 +33,10 @@ func (h *Handler) APIGetZone(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, zone)
 }
 
-// APICreateZone creates a zone from JSON body.
+// APICreateZone creates a zone from a JSON body (POST /api/v1/zones).
+//
+// Expects a models.ZoneCreateRequest payload. Returns the created zone
+// with HTTP 201 on success.
 func (h *Handler) APICreateZone(w http.ResponseWriter, r *http.Request) {
 	var req models.ZoneCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -49,7 +52,7 @@ func (h *Handler) APICreateZone(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, zone)
 }
 
-// APIDeleteZone deletes a zone.
+// APIDeleteZone deletes a zone by zone_id (DELETE /api/v1/zones/{zone_id}).
 func (h *Handler) APIDeleteZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	if err := h.PDNS.DeleteZone(zoneID); err != nil {
@@ -59,9 +62,9 @@ func (h *Handler) APIDeleteZone(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "zone deleted"})
 }
 
-// --- Record API ---
+// -- Record API ---
 
-// APIListRecords returns all records for a zone.
+// APIListRecords returns all records (RRSets) for a zone as JSON (GET /api/v1/zones/{zone_id}/records).
 func (h *Handler) APIListRecords(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	records, err := h.PDNS.ListRecords(zoneID)
@@ -75,7 +78,9 @@ func (h *Handler) APIListRecords(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, records)
 }
 
-// APICreateRecord creates a record in a zone.
+// APICreateRecord creates a record (RRSet) in a zone from a JSON body (POST /api/v1/zones/{zone_id}/records).
+//
+// Expects a models.RRSet payload. Returns HTTP 201 on success.
 func (h *Handler) APICreateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	var rrset models.RRSet
@@ -91,7 +96,9 @@ func (h *Handler) APICreateRecord(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"message": "record created"})
 }
 
-// APIUpdateRecord updates a record in a zone.
+// APIUpdateRecord replaces a record (RRSet) in a zone from a JSON body (PUT /api/v1/zones/{zone_id}/records).
+//
+// Uses the REPLACE changetype to ensure idempotent updates.
 func (h *Handler) APIUpdateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	var rrset models.RRSet
@@ -107,7 +114,9 @@ func (h *Handler) APIUpdateRecord(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "record updated"})
 }
 
-// APIDeleteRecord deletes a record from a zone.
+// APIDeleteRecord deletes a record from a zone by name and type (DELETE /api/v1/zones/{zone_id}/records).
+//
+// Expects a JSON body with "name" and "type" fields.
 func (h *Handler) APIDeleteRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 
@@ -127,7 +136,7 @@ func (h *Handler) APIDeleteRecord(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "record deleted"})
 }
 
-// APIStats returns server statistics.
+// APIStats returns PowerDNS server statistics combined with the zone count (GET /api/v1/stats).
 func (h *Handler) APIStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.PDNS.GetStatistics()
 	if err != nil {

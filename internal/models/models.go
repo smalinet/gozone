@@ -1,3 +1,8 @@
+// Package models defines the data structures used throughout GoZone,
+// including users, API keys, activity logs, zones, and DNS records.
+// Models are strictly JSON-serializable for PowerDNS API communication,
+// with sensitive fields (passwords, key hashes) excluded from JSON output
+// via struct tags.
 package models
 
 import "time"

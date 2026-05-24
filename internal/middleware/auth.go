@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware for authentication, authorization,
+// and user context propagation in the GoZone web application.
 package middleware
 
 import (
@@ -15,6 +17,8 @@ import (
 type contextKey string
 
 const (
+	// UserContextKey is the context key used to store the authenticated User pointer
+	// in the request context. Use GetUser(r) to retrieve the user.
 	UserContextKey contextKey = "user"
 )
 
@@ -26,7 +30,17 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateToken creates a signed JWT for the given user.
+// GenerateToken creates a signed JWT token for the given user.
+//
+// It produces an HMAC-SHA256 token containing the user ID, username, and role.
+// The token expires after the given duration from the current time.
+//
+// Parameters:
+//   - user: the authenticated user to encode in the token
+//   - secret: the HMAC signing key (must not be empty in production)
+//   - duration: the token validity period from now
+//
+// Returns the encoded JWT string and any signing error.
 func GenerateToken(user *models.User, secret []byte, duration time.Duration) (string, error) {
 	claims := Claims{
 		UserID:   user.ID,
@@ -43,7 +57,17 @@ func GenerateToken(user *models.User, secret []byte, duration time.Duration) (st
 	return token.SignedString(secret)
 }
 
-// ParseToken validates and parses a JWT string.
+// ParseToken validates and parses a JWT token string.
+//
+// It verifies the HMAC signature and extracts the embedded claims.
+// Only HS256-family signing methods are accepted.
+//
+// Parameters:
+//   - tokenString: the raw JWT token to parse
+//   - secret: the HMAC key used to verify the signature
+//
+// Returns the parsed Claims on success, or an error if the token is invalid,
+// expired, or uses an unsupported algorithm.
 func ParseToken(tokenString string, secret []byte) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -63,7 +87,19 @@ func ParseToken(tokenString string, secret []byte) (*Claims, error) {
 	return claims, nil
 }
 
-// Auth creates a middleware that validates JWT tokens from cookies or Authorization headers.
+// Auth returns a middleware that validates JWT tokens for web UI requests.
+//
+// Authentication is attempted in the following order:
+//  1. Cookie named "gozone_session"
+//  2. Authorization header with "Bearer " prefix
+//
+// If authentication fails, the user is redirected to /login. Invalid cookies
+// are cleared automatically. The authenticated user is loaded from the database
+// and stored in the request context via UserContextKey.
+//
+// Parameters:
+//   - db: the database connection for loading the user record
+//   - secret: the HMAC key used to verify JWT signatures
 func Auth(db *sql.DB, secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +151,17 @@ func Auth(db *sql.DB, secret []byte) func(http.Handler) http.Handler {
 	}
 }
 
-// APIKeyAuth creates a middleware for API key authentication.
+// APIKeyAuth returns a middleware that validates API key tokens for REST API requests.
+//
+// The API key can be provided via:
+//  1. X-API-Key header
+//  2. Authorization header with "Bearer " prefix
+//
+// Expired API keys return HTTP 401 with the message "api_key_expired".
+// The authenticated user is stored in the request context via UserContextKey
+// and the API key's last_used_at timestamp is updated on each request.
+//
+// Note: In production, the incoming key should be hashed before comparison.
 func APIKeyAuth(db *sql.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +210,11 @@ func APIKeyAuth(db *sql.DB) func(http.Handler) http.Handler {
 	}
 }
 
-// RequireAdmin checks that the current user has admin role.
+// RequireAdmin is a middleware that restricts access to users with the admin role.
+//
+// It must be placed after Auth or APIKeyAuth in the middleware chain so that
+// a user is available in the request context. Returns HTTP 403 if the user is
+// not authenticated or does not have the "admin" role.
 func RequireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := GetUser(r)
@@ -176,7 +226,9 @@ func RequireAdmin(next http.Handler) http.Handler {
 	})
 }
 
-// GetUser retrieves the current user from the request context.
+// GetUser retrieves the currently authenticated user from the request context.
+//
+// Returns nil if no user was stored by Auth or APIKeyAuth middleware.
 func GetUser(r *http.Request) *models.User {
 	user, ok := r.Context().Value(UserContextKey).(*models.User)
 	if !ok {

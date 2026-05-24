@@ -1,10 +1,13 @@
+// Package database manages the SQLite database connection and schema migrations
+// for GoZone. It handles DSN validation, directory creation, and automatic table
+// initialization on first connection.
 package database
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/url" // Import net/url
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -18,7 +21,17 @@ type DB struct {
 	Conn *sql.DB
 }
 
-// New opens a database connection and runs migrations.
+// New opens a SQLite database connection and runs migrations.
+//
+// It validates the DSN, ensures the parent directory exists, and appends
+// WAL journal mode and foreign key enforcement parameters automatically.
+// In-memory databases (":memory:") are supported for testing.
+// SQLite connections are capped at 1 to serialize concurrent writes.
+//
+// Parameters:
+//   - cfg: database configuration containing driver name and DSN
+//
+// Returns a ready-to-use DB handle or an error if connection or migration fails.
 func New(cfg *config.DatabaseConfig) (*DB, error) {
 	if cfg.Driver != "sqlite3" {
 		return nil, fmt.Errorf("unsupported database driver: %s (only sqlite3 is supported)", cfg.Driver)

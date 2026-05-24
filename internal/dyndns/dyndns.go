@@ -1,3 +1,6 @@
+// Package dyndns implements a DynDNS 2 protocol endpoint for dynamic DNS
+// updates. It authenticates users via HTTP Basic Auth, finds the matching
+// zone in PowerDNS, and creates or replaces A/AAAA records.
 package dyndns
 
 import (
@@ -13,13 +16,21 @@ import (
 )
 
 // Handler provides DynDNS 2 protocol support.
+//
+// It authenticates users against the local user database and updates
+// PowerDNS records accordingly.
 type Handler struct {
 	DB     *sql.DB
 	PDNS   *pdns.Client
 	Domain string // Allow dyndns updates for *.domain
 }
 
-// NewHandler creates a new DyDNS handler.
+// NewHandler creates a new DynDNS handler.
+//
+// Parameters:
+//   - db: database connection for authenticating users
+//   - pdnsClient: PowerDNS API client for updating records
+//   - domain: optional base domain restriction (empty means all zones)
 func NewHandler(db *sql.DB, pdnsClient *pdns.Client, domain string) *Handler {
 	return &Handler{
 		DB:     db,
@@ -28,7 +39,14 @@ func NewHandler(db *sql.DB, pdnsClient *pdns.Client, domain string) *Handler {
 	}
 }
 
-// ServeHTTP handles DynDNS update requests (nic/update endpoint).
+// ServeHTTP handles DynDNS update requests at the /nic/update endpoint.
+//
+// It implements the DynDNS 2 protocol subset:
+//   - Authentication via HTTP Basic Auth against the local user database
+//   - IP resolution from "myip", "ip" query parameters, or the client's remote address
+//   - Comma-separated hostname support (multiple hostnames in one request)
+//   - Returns "good <ip>" on success, "badauth" on authentication failure,
+//     "nohost" when the zone cannot be found, "dnserr" on PowerDNS errors
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

@@ -6,7 +6,8 @@ import (
 	"github.com/babykart/gozone/internal/middleware"
 )
 
-// Dashboard displays the main dashboard with server stats.
+// Dashboard renders the main dashboard page with PowerDNS server statistics,
+// zone and user counts, and recent activity logs (GET /dashboard).
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 

@@ -13,7 +13,9 @@ import (
 	"github.com/babykart/gozone/internal/models"
 )
 
-// ListUsers displays all users (admin only).
+// ListUsers renders the user management page (GET /users).
+//
+// Admin-only. Lists all users ordered by username.
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	if !user.IsAdmin() {
@@ -49,7 +51,9 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "users.html", data)
 }
 
-// CreateUserPage displays the user creation form.
+// CreateUserPage renders the user creation form (GET /users/new).
+//
+// Admin-only.
 func (h *Handler) CreateUserPage(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
 	if !admin.IsAdmin() {
@@ -64,7 +68,10 @@ func (h *Handler) CreateUserPage(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "user_create.html", data)
 }
 
-// CreateUser handles user creation.
+// CreateUser creates a new user from form data (POST /users/create).
+//
+// Admin-only. Accepts username, email, password, first_name, last_name, and role.
+// The password is hashed with bcrypt before storage.
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
 	if !admin.IsAdmin() {
@@ -118,7 +125,9 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
 
-// EditUserPage displays the user edit form.
+// EditUserPage renders the user edit form (GET /users/{user_id}/edit).
+//
+// Admin-only. Loads the target user by user_id path parameter.
 func (h *Handler) EditUserPage(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
 	if !admin.IsAdmin() {
@@ -155,7 +164,10 @@ func (h *Handler) EditUserPage(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "user_edit.html", data)
 }
 
-// UpdateUser handles user updates.
+// UpdateUser updates a user's profile from form data (POST /users/{user_id}/update).
+//
+// Admin-only. Updates email, first_name, last_name, role, and enabled status.
+// If a new password is provided, it is hashed and stored separately.
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
 	if !admin.IsAdmin() {
@@ -215,7 +227,9 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
 
-// DeleteUser handles user deletion.
+// DeleteUser deletes a user by user_id form value (POST /users/delete).
+//
+// Admin-only. An admin cannot delete themselves.
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
 	if !admin.IsAdmin() {

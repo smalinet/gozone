@@ -1,3 +1,6 @@
+// Package handlers contains HTTP handler methods for the GoZone web UI
+// and REST API. All handler methods are attached to the Handler struct,
+// which holds shared dependencies (database, PowerDNS client, config, templates).
 package handlers
 
 import (

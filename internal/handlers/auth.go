@@ -11,7 +11,7 @@ import (
 	"github.com/babykart/gozone/internal/models"
 )
 
-// LoginPage displays the login form.
+// LoginPage renders the login form (GET /login).
 func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"Title": "Login - GoZone",
@@ -20,7 +20,10 @@ func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "login.html", data)
 }
 
-// Login processes the login form.
+// Login authenticates a user from a POST form submission (POST /login).
+//
+// On success, it generates a JWT stored in the "gozone_session" cookie and
+// redirects to /dashboard. On failure, redirects to /login?error=invalid_credentials.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -83,7 +86,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
-// Logout clears the session and redirects to login.
+// Logout clears the session cookie, records the logout activity, and redirects
+// to /login (GET /logout).
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	if user != nil {
@@ -104,7 +108,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// ProfilePage displays the current user's profile.
+// ProfilePage renders the authenticated user's profile (GET /profile).
 func (h *Handler) ProfilePage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	data := map[string]interface{}{
