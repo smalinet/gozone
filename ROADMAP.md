@@ -146,7 +146,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Enable mocking without `httptest.Server`
   - Simplify handler tests
 
-- [ ] **Add JSON serialization tests** for models
+- [x] **Add JSON serialization tests** for models
   - Verify `PasswordHash` never appears in JSON
   - Verify `KeyHash` never appears in JSON
   - Test deserialization of all types
