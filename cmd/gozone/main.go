@@ -17,7 +17,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/csrf"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/babykart/gozone/internal/config"
 	"github.com/babykart/gozone/internal/database"
@@ -51,7 +50,9 @@ func main() {
 	pdnsClient := pdns.NewClient(&cfg.PowerDNS)
 
 	// Seed admin user if no users exist
-	seedAdminUser(db, cfg)
+	if err := database.SeedAdminUser(db.Conn, cfg); err != nil {
+		log.Fatalf("[gozone] failed to seed admin user: %v", err)
+	}
 
 	// Parse templates
 	tmpl := parseTemplates()
@@ -203,39 +204,4 @@ func parseTemplates() *template.Template {
 	}
 	log.Printf("[gozone] loaded %d templates", len(tmpl.Templates()))
 	return tmpl
-}
-
-// seedAdminUser creates an admin user if no users exist in the database.
-func seedAdminUser(db *database.DB, cfg *config.Config) {
-	var count int
-	db.Conn.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
-	if count > 0 {
-		return
-	}
-
-	username := "admin"
-	email := "admin@gozone.local"
-	password := os.Getenv("GOZONE_ADMIN_PASSWORD")
-	if password == "" {
-		password = "admin"
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), cfg.Auth.BcryptCost)
-	if err != nil {
-		log.Printf("[gozone] WARNING: failed to hash admin password: %v", err)
-		return
-	}
-
-	_, err = db.Conn.Exec(
-		`INSERT INTO users (username, email, password_hash, first_name, last_name, role)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		username, email, string(hash), "Admin", "User", "admin",
-	)
-	if err != nil {
-		log.Printf("[gozone] WARNING: failed to seed admin user: %v", err)
-		return
-	}
-
-	log.Printf("[gozone] seeded admin user (username: %s)", username)
-	log.Printf("[gozone] CHANGE THE DEFAULT PASSWORD IMMEDIATELY!")
 }

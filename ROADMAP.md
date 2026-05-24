@@ -170,7 +170,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Pattern: `tx, _ := db.Begin(); defer tx.Rollback(); ... tx.Commit()`
 
 ### Code Organization
-- [ ] **Move `seedAdminUser()` to a testable package**
+- [x] **Move `seedAdminUser()` to a testable package**
   - Create `internal/database/seed.go`
   - Export function: `func SeedAdminUser(db *sql.DB, cfg *config.Config) error`
   - Call from `main.go`

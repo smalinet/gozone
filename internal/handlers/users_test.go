@@ -9,15 +9,13 @@ import (
 
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/models"
+	"github.com/babykart/gozone/internal/testutil"
 )
 
 func seedAdminUser(t *testing.T, h *Handler) *models.User {
 	t.Helper()
-	h.DB.Exec(
-		`INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)`,
-		"admin", "admin@example.com", "hash", "admin",
-	)
-	return &models.User{ID: 1, Username: "admin", Email: "admin@example.com", Role: "admin"}
+	adminID := testutil.SeedTestUser(t, h.DB, "admin", "adminpass", "admin", true)
+	return &models.User{ID: adminID, Username: "admin", Email: "admin@test.local", Role: "admin"}
 }
 
 func TestListUsers_Admin(t *testing.T) {
@@ -148,8 +146,7 @@ func TestCreateUser_EmptyFields(t *testing.T) {
 func TestEditUserPage_Admin(t *testing.T) {
 	h := newTestHandler(t)
 	admin := seedAdminUser(t, h)
-	seedAdminUser(t, h) // seed again to get user ID 2... actually this won't work due to unique constraint
-	// Let's create a second user
+
 	h.DB.Exec(
 		`INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)`,
 		"user2", "user2@example.com", "hash", "user",
