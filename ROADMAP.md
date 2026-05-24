@@ -114,7 +114,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Record not found (name/type mismatch) → error
   - Record retrieval error
 
-- [ ] **Test `RectifyZone()` and `NotifyZone()`** (`internal/handlers/zones_test.go`)
+- [x] **Test `RectifyZone()` and `NotifyZone()`** (`internal/handlers/zones_test.go`)
   - Admin-only access (403 for non-admin)
   - Successful PowerDNS operation
   - PowerDNS error → error rendering

@@ -220,3 +220,129 @@ func TestViewZone(t *testing.T) {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
 }
+
+func TestRectifyZone_Success(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/rectify", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.RectifyZone(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected 303 redirect, got %d", w.Code)
+	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='rectify_zone'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 activity log, got %d", count)
+	}
+}
+
+func TestRectifyZone_NonAdmin(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 2, Username: "user", Role: "user"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/rectify", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.RectifyZone(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestRectifyZone_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/rectify", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.RectifyZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Rectify failed") {
+		t.Error("expected 'Rectify failed' in error page")
+	}
+}
+
+func TestNotifyZone_Success(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/notify", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.NotifyZone(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected 303 redirect, got %d", w.Code)
+	}
+}
+
+func TestNotifyZone_NonAdmin(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 2, Username: "user", Role: "user"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/notify", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.NotifyZone(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestNotifyZone_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/notify", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.NotifyZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Notify failed") {
+		t.Error("expected 'Notify failed' in error page")
+	}
+}
