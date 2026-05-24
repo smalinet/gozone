@@ -28,7 +28,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Add CSRF tokens to all HTML templates
   - Test that requests without CSRF tokens are rejected
 
-- [ ] **Enable Secure flag on cookies** (`internal/handlers/auth.go:73`)
+- [x] **Enable Secure flag on cookies** (`internal/handlers/auth.go:73`)
   - Auto-detect environment (dev vs prod)
   - Force `Secure: true` in production
   - Add `SameSite=Strict` (already present, verify)

@@ -68,6 +68,36 @@ To generate a persistent key:
 openssl rand -hex 32
 ```
 
+### HTTPS Configuration
+
+Session cookies use the `Secure` flag and `SameSite=Strict` by default. The `Secure` flag is automatically enabled when the request arrives over HTTPS (direct TLS or via `X-Forwarded-Proto: https` header from a reverse proxy).
+
+**Option 1: Direct TLS**
+
+Configure `server.port` to 443 and provide TLS certificate paths (requires a reverse proxy or Go TLS config).
+
+**Option 2: Reverse Proxy (recommended)**
+
+Run GoZone behind nginx, Caddy, or Traefik:
+
+```nginx
+# nginx example
+server {
+    listen 443 ssl;
+    server_name dns-admin.example.com;
+
+    ssl_certificate     /etc/ssl/certs/example.com.pem;
+    ssl_certificate_key /etc/ssl/private/example.com.key;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+    }
+}
+```
+
 ## API
 
 All API endpoints require an API key passed via `X-API-Key` header.

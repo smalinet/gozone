@@ -73,8 +73,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(duration),
 		HttpOnly: true,
-		Secure:   false, // Set true in production with HTTPS
-		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecure(r),
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	// Log activity
@@ -103,6 +103,8 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
+		Secure:   isSecure(r),
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -116,4 +118,15 @@ func (h *Handler) ProfilePage(w http.ResponseWriter, r *http.Request) {
 		"User":  user,
 	}
 	h.render(w, r, "profile.html", data)
+}
+
+// isSecure detects whether the current request uses HTTPS.
+//
+// It checks r.TLS (direct TLS) and the X-Forwarded-Proto header
+// for reverse proxy setups. Returns false for plain HTTP.
+func isSecure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	return r.Header.Get("X-Forwarded-Proto") == "https"
 }
