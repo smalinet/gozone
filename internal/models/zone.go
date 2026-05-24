@@ -90,3 +90,9 @@ type ZoneStatistics struct {
 	Records    int             `json:"records"`
 	Statistics []StatisticItem `json:"statistics,omitempty"`
 }
+
+// ZoneWithInfo combines a zone with its record count for listing pages.
+type ZoneWithInfo struct {
+	Zone        Zone `json:"zone"`
+	RecordCount int  `json:"record_count"`
+}

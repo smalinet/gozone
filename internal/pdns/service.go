@@ -18,6 +18,7 @@ type ZoneService interface {
 	GetZone(zoneID string) (*models.Zone, error)
 	CreateZone(req models.ZoneCreateRequest) (*models.Zone, error)
 	DeleteZone(zoneID string) error
+	ListZonesWithInfo() ([]models.ZoneWithInfo, error)
 
 	// Records
 	ListRecords(zoneID string) ([]models.RRSet, error)

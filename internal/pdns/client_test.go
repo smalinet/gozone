@@ -104,6 +104,56 @@ func TestListZones(t *testing.T) {
 	}
 }
 
+func TestListZonesWithInfo(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" && r.URL.Path == "/api/v1/servers/localhost/zones" {
+			json.NewEncoder(w).Encode([]models.Zone{
+				{ID: "example.com", Name: "example.com", Kind: "Native"},
+				{ID: "test.com", Name: "test.com", Kind: "Native"},
+			})
+		} else {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"name": "example.com",
+				"kind": "Native",
+				"rrsets": []map[string]interface{}{
+					{"name": "example.com", "type": "SOA", "ttl": 3600},
+					{"name": "www.example.com", "type": "A", "ttl": 3600},
+				},
+			})
+		}
+	})
+
+	info, err := client.ListZonesWithInfo()
+	if err != nil {
+		t.Fatalf("ListZonesWithInfo failed: %v", err)
+	}
+	if len(info) != 2 {
+		t.Fatalf("expected 2 zones, got %d", len(info))
+	}
+	if info[0].Zone.Name != "example.com" {
+		t.Errorf("expected example.com, got %s", info[0].Zone.Name)
+	}
+	if info[0].RecordCount != 2 {
+		t.Errorf("expected 2 records, got %d", info[0].RecordCount)
+	}
+}
+
+func TestListZonesWithInfo_Empty(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[]`))
+	})
+
+	info, err := client.ListZonesWithInfo()
+	if err != nil {
+		t.Fatalf("ListZonesWithInfo failed: %v", err)
+	}
+	if len(info) != 0 {
+		t.Fatalf("expected 0 zones, got %d", len(info))
+	}
+}
+
 func TestGetZone(t *testing.T) {
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

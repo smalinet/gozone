@@ -236,7 +236,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Simplify deployment (single binary)
 
 ### Database Optimizations
-- [ ] **Optimize `ListZones` to avoid N+1 queries** (`internal/handlers/zones.go:30-36`)
+- [x] **Optimize `ListZones` to avoid N+1 queries** (`internal/handlers/zones.go:30-36`)
   - Option 1: Use PowerDNS endpoint that returns zones + records
   - Option 2: Cache record counts (TTL 5 min)
   - Option 3: Load counts in batch with single query

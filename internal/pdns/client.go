@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/babykart/gozone/internal/config"
@@ -153,6 +154,45 @@ func (c *Client) ListZones() ([]models.Zone, error) {
 		return nil, fmt.Errorf("unmarshal zones: %w", err)
 	}
 	return zones, nil
+}
+
+// ListZonesWithInfo fetches all zones and their record counts concurrently.
+//
+// It avoids the N+1 sequential request pattern by fetching record lists
+// in parallel goroutines. Results preserve the original zone order.
+func (c *Client) ListZonesWithInfo() ([]models.ZoneWithInfo, error) {
+	zones, err := c.ListZones()
+	if err != nil {
+		return nil, err
+	}
+
+	type result struct {
+		index int
+		count int
+	}
+
+	results := make([]result, len(zones))
+	var wg sync.WaitGroup
+	wg.Add(len(zones))
+
+	for i, z := range zones {
+		go func(i int, zoneID string) {
+			defer wg.Done()
+			records, err := c.ListRecords(zoneID)
+			if err != nil {
+				results[i] = result{index: i, count: 0}
+				return
+			}
+			results[i] = result{index: i, count: len(records)}
+		}(i, z.ID)
+	}
+	wg.Wait()
+
+	info := make([]models.ZoneWithInfo, len(zones))
+	for i, z := range zones {
+		info[i] = models.ZoneWithInfo{Zone: z, RecordCount: results[i].count}
+	}
+	return info, nil
 }
 
 // GetZone returns a specific zone.

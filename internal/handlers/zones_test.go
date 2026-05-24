@@ -15,7 +15,11 @@ import (
 func TestListZones(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"id":"example.com","name":"example.com","kind":"Native"}]`))
+		if r.URL.Path == "/servers/localhost/zones" {
+			w.Write([]byte(`[{"id":"example.com","name":"example.com","kind":"Native"}]`))
+		} else {
+			w.Write([]byte(`[]`))
+		}
 	})
 	defer pdnsSrv.Close()
 

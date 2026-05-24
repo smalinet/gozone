@@ -15,32 +15,16 @@ import (
 func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
-	zones, err := h.PDNS.ListZones()
+	zones, err := h.PDNS.ListZonesWithInfo()
 	if err != nil {
 		h.renderError(w, r, "Failed to fetch zones: "+err.Error())
 		return
 	}
 
-	// Count records per zone
-	type ZoneWithCount struct {
-		Zone        models.Zone
-		RecordCount int
-	}
-
-	var zoneList []ZoneWithCount
-	for _, z := range zones {
-		records, err := h.PDNS.ListRecords(z.ID)
-		count := 0
-		if err == nil {
-			count = len(records)
-		}
-		zoneList = append(zoneList, ZoneWithCount{Zone: z, RecordCount: count})
-	}
-
 	data := map[string]interface{}{
 		"Title":   "Zones - GoZone",
 		"User":    user,
-		"Zones":   zoneList,
+		"Zones":   zones,
 		"IsAdmin": user.IsAdmin(),
 	}
 	h.render(w, r, "zones.html", data)
