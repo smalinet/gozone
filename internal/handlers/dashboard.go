@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/babykart/gozone/internal/middleware"
 )
@@ -37,8 +38,8 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var dashboardStats []StatItem
-	dashboardStats = append(dashboardStats, StatItem{Label: "Zones", Value: intToStr(zoneCount)})
-	dashboardStats = append(dashboardStats, StatItem{Label: "Users", Value: intToStr(userCount)})
+	dashboardStats = append(dashboardStats, StatItem{Label: "Zones", Value: strconv.Itoa(zoneCount)})
+	dashboardStats = append(dashboardStats, StatItem{Label: "Users", Value: strconv.Itoa(userCount)})
 
 	if server != nil {
 		dashboardStats = append(dashboardStats, StatItem{Label: "PDNS Version", Value: server.Version})
@@ -99,16 +100,4 @@ func (h *Handler) getRecentActivityLogs(limit int) []map[string]interface{} {
 		logs = append(logs, log)
 	}
 	return logs
-}
-
-func intToStr(n int) string {
-	s := ""
-	if n == 0 {
-		return "0"
-	}
-	for n > 0 {
-		s = string(rune('0'+n%10)) + s
-		n /= 10
-	}
-	return s
 }

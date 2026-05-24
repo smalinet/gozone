@@ -26,25 +26,6 @@ func TestDashboard(t *testing.T) {
 	}
 }
 
-func TestIntToStr(t *testing.T) {
-	tests := []struct {
-		n    int
-		want string
-	}{
-		{0, "0"},
-		{1, "1"},
-		{42, "42"},
-		{100, "100"},
-		{9999, "9999"},
-	}
-	for _, tt := range tests {
-		got := intToStr(tt.n)
-		if got != tt.want {
-			t.Errorf("intToStr(%d) = %s, want %s", tt.n, got, tt.want)
-		}
-	}
-}
-
 func TestGetRecentActivityLogs_Empty(t *testing.T) {
 	h := newTestHandler(t)
 
