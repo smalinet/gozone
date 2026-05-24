@@ -1,12 +1,13 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/babykart/gozone/internal/logger"
 )
 
 // RateLimiter tracks per-key request rates with token bucket algorithm.
@@ -89,7 +90,7 @@ func (rl *RateLimiter) Limit(keyFn KeyFunc) func(http.Handler) http.Handler {
 			}
 
 			if !rl.allow(key) {
-				log.Printf("[ratelimit] %s exceeded limit", key)
+				logger.Warn("rate limit exceeded", "key", key)
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Retry-After", "60")
 				w.WriteHeader(http.StatusTooManyRequests)

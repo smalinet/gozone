@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +21,7 @@ import (
 	"github.com/babykart/gozone/internal/database"
 	"github.com/babykart/gozone/internal/dyndns"
 	"github.com/babykart/gozone/internal/handlers"
+	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/pdns"
 )
@@ -30,19 +30,21 @@ func main() {
 	configPath := flag.String("config", "config.yaml", "Path to YAML configuration file")
 	flag.Parse()
 
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("[gozone] starting PowerDNS Admin interface...")
+	logger.Info("starting PowerDNS Admin interface")
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		logger.Fatal("failed to load configuration", "error", err)
 	}
+
+	// Initialize structured logging with configured level
+	logger.Init(cfg.Logging.Level)
 
 	// Open database
 	db, err := database.New(&cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		logger.Fatal("failed to open database", "error", err)
 	}
 	defer db.Close()
 
@@ -51,7 +53,7 @@ func main() {
 
 	// Seed admin user if no users exist
 	if err := database.SeedAdminUser(db.Conn, cfg); err != nil {
-		log.Fatalf("[gozone] failed to seed admin user: %v", err)
+		logger.Fatal("failed to seed admin user", "error", err)
 	}
 
 	// Parse templates
@@ -173,19 +175,19 @@ func main() {
 
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	log.Printf("[gozone] listening on %s", addr)
+	logger.Info("listening", "addr", addr)
 
 	// Graceful shutdown
 	go func() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
-		log.Println("[gozone] shutting down...")
+		logger.Info("shutting down")
 		os.Exit(0)
 	}()
 
 	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		logger.Fatal("server failed", "error", err)
 	}
 }
 
@@ -205,8 +207,8 @@ func parseTemplates() *template.Template {
 		"ne": func(a, b interface{}) bool { return a != b },
 	}).ParseGlob(pattern)
 	if err != nil {
-		log.Fatalf("Failed to parse templates: %v", err)
+		logger.Fatal("failed to parse templates", "error", err)
 	}
-	log.Printf("[gozone] loaded %d templates", len(tmpl.Templates()))
+	logger.Info("templates loaded", "count", len(tmpl.Templates()))
 	return tmpl
 }

@@ -10,12 +10,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/babykart/gozone/internal/config"
+	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/models"
 )
 
@@ -83,7 +83,7 @@ func (c *Client) do(method, path string, body interface{}) ([]byte, int, error) 
 		return nil, resp.StatusCode, fmt.Errorf("read response: %w", err)
 	}
 
-	log.Printf("[pdns] %s %s -> %d (%d bytes)", method, path, resp.StatusCode, len(respBody))
+	logger.Info("pdns request", "method", method, "path", path, "status", resp.StatusCode, "bytes", len(respBody))
 	return respBody, resp.StatusCode, nil
 }
 

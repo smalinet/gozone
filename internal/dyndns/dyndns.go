@@ -6,11 +6,11 @@ package dyndns
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 
+	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/models"
 	"github.com/babykart/gozone/internal/pdns"
 )
@@ -86,7 +86,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Validate user credentials
 	if !h.validateUser(username, password) {
-		log.Printf("[dyndns] auth failed for user %s", username)
+		logger.Warn("dyndns auth failed", "username", username)
 		http.Error(w, "badauth", http.StatusUnauthorized)
 		return
 	}
@@ -123,7 +123,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Update or create the record
 		if err := h.updateRecord(zoneName, host, recordType, myip); err != nil {
-			log.Printf("[dyndns] update failed for %s: %v", host, err)
+			logger.Error("dyndns update failed", "host", host, "error", err)
 			results = append(results, fmt.Sprintf("dnserr %s", host))
 			continue
 		}

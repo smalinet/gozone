@@ -3,11 +3,12 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 
-	"github.com/babykart/gozone/internal/config"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/babykart/gozone/internal/config"
+	"github.com/babykart/gozone/internal/logger"
 )
 
 // SeedAdminUser creates an admin user if no users exist in the database.
@@ -46,7 +47,7 @@ func SeedAdminUser(db *sql.DB, cfg *config.Config) error {
 		return fmt.Errorf("seed admin: insert user: %w", err)
 	}
 
-	log.Printf("[db] seeded admin user (username: admin)")
-	log.Printf("[db] CHANGE THE DEFAULT PASSWORD IMMEDIATELY!")
+	logger.Info("seeded admin user", "username", "admin")
+	logger.Warn("CHANGE THE DEFAULT ADMIN PASSWORD IMMEDIATELY")
 	return nil
 }

@@ -3,9 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/models"
 	"github.com/babykart/gozone/internal/validators"
@@ -45,7 +45,7 @@ func writeAPIError(w http.ResponseWriter, status int, code, label string) {
 
 // writeAPIErrorWithCause logs the cause and returns a generic error to the client.
 func (h *Handler) writeAPIErrorWithCause(w http.ResponseWriter, r *http.Request, status int, code string, label string, err error) {
-	log.Printf("[api] %s %s: %v (user=%v)", r.Method, r.URL.Path, err, apiUserID(r))
+	logger.Error("api error", "method", r.Method, "path", r.URL.Path, "error", err, "user_id", apiUserID(r))
 	writeAPIError(w, status, code, label)
 }
 

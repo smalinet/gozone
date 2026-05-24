@@ -7,12 +7,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/babykart/gozone/internal/constants"
+	"github.com/babykart/gozone/internal/logger"
 )
 
 // Config holds all configuration for the application.
@@ -127,9 +127,8 @@ func Load(path string) (*Config, error) {
 			return nil, fmt.Errorf("failed to generate secret key: %w", err)
 		}
 		cfg.Server.SecretKey = key
-		log.Printf("[config] WARNING: auto-generated a random secret key.")
-		log.Printf("[config] Set GOZONE_SECRET_KEY or server.secret_key in config.yaml to persist it across restarts.")
-		log.Printf("[config] Current generated key: %s", key)
+		logger.Warn("auto-generated random secret key, set GOZONE_SECRET_KEY to persist")
+		logger.Warn("current generated key", "key", key)
 	}
 
 	// Ensure data directory exists for SQLite

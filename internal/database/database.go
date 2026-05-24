@@ -6,7 +6,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/babykart/gozone/internal/config"
 	"github.com/babykart/gozone/internal/constants"
+	"github.com/babykart/gozone/internal/logger"
 )
 
 // DB wraps the sql.DB connection pool.
@@ -82,7 +82,7 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
-	log.Println("[db] connected to SQLite database:", cfg.DSN)
+	logger.Info("connected to SQLite database", "dsn", cfg.DSN)
 	return db, nil
 }
 
@@ -142,6 +142,6 @@ func (db *DB) migrate() error {
 		}
 	}
 
-	log.Println("[db] migrations completed successfully")
+	logger.Info("migrations completed")
 	return nil
 }
