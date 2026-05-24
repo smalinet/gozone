@@ -64,6 +64,7 @@ func main() {
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.RealIP)
 	r.Use(chimw.RequestID)
+	r.Use(chimw.Compress(5))
 
 	// Public routes
 	r.Get("/login", h.LoginPage)
