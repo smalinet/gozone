@@ -116,7 +116,14 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.DB.Exec(
+	tx, err := h.DB.Begin()
+	if err != nil {
+		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(
 		`INSERT INTO users (username, email, password_hash, first_name, last_name, role)
 		 VALUES (?, ?, ?, ?, ?, ?)`,
 		username, email, string(hash), firstName, lastName, role,
@@ -127,10 +134,19 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, _ := result.LastInsertId()
-	h.DB.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'create_user', ?)",
 		admin.ID, fmt.Sprintf("Created user %s (id: %d)", username, userID),
 	)
+	if err != nil {
+		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		return
+	}
 
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
@@ -216,7 +232,14 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		enabledVal = 1
 	}
 
-	_, err := h.DB.Exec(
+	tx, err := h.DB.Begin()
+	if err != nil {
+		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(
 		`UPDATE users SET email = ?, first_name = ?, last_name = ?, role = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP
 		 WHERE id = ?`,
 		email, firstName, lastName, role, enabledVal, userID,
@@ -233,13 +256,26 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			h.renderError(w, r, "Failed to hash password")
 			return
 		}
-		h.DB.Exec("UPDATE users SET password_hash = ? WHERE id = ?", string(hash), userID)
+		_, err = tx.Exec("UPDATE users SET password_hash = ? WHERE id = ?", string(hash), userID)
+		if err != nil {
+			h.renderError(w, r, "Failed to update password: "+err.Error())
+			return
+		}
 	}
 
-	h.DB.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'update_user', ?)",
 		admin.ID, fmt.Sprintf("Updated user %d", userID),
 	)
+	if err != nil {
+		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		return
+	}
 
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
@@ -268,16 +304,32 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.DB.Exec("DELETE FROM users WHERE id = ?", userID)
+	tx, err := h.DB.Begin()
+	if err != nil {
+		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM users WHERE id = ?", userID)
 	if err != nil {
 		h.renderError(w, r, "Failed to delete user: "+err.Error())
 		return
 	}
 
-	h.DB.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'delete_user', ?)",
 		admin.ID, fmt.Sprintf("Deleted user %d", userID),
 	)
+	if err != nil {
+		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		return
+	}
 
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }

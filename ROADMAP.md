@@ -163,7 +163,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Log all errors with context (user ID, zone ID, request ID)
   - Define error codes: `ZONE_NOT_FOUND`, `UNAUTHORIZED`, `VALIDATION_ERROR`, etc.
 
-- [ ] **Use SQL transactions** for multi-step operations
+- [x] **Use SQL transactions** for multi-step operations
   - `internal/handlers/users.go:102-116`: User creation + activity log
   - `internal/handlers/zones.go:105-108`: Zone creation + activity log
   - `internal/handlers/records.go:82-85`: Record creation + activity log
