@@ -277,6 +277,199 @@ func TestAPIStats(t *testing.T) {
 	}
 }
 
+func TestAPIListZones_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/zones", nil)
+	h.APIListZones(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+	var resp apiError
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Code != ErrCodeInternalError {
+		t.Errorf("expected code %s, got %s", ErrCodeInternalError, resp.Code)
+	}
+}
+
+func TestAPIGetZone_NotFound(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/zones/nonexistent", nil)
+	r.SetPathValue("zone_id", "nonexistent")
+	h.APIGetZone(w, r)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+	var resp apiError
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Code != ErrCodeZoneNotFound {
+		t.Errorf("expected code %s, got %s", ErrCodeZoneNotFound, resp.Code)
+	}
+}
+
+func TestAPICreateZone_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	body := `{"name":"fail.example.com","kind":"Native"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/zones", jsonBody(body))
+	r.Header.Set("Content-Type", "application/json")
+	h.APICreateZone(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestAPIDeleteZone_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/api/v1/zones/example.com", nil)
+	r.SetPathValue("zone_id", "example.com")
+	h.APIDeleteZone(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestAPIListRecords_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/zones/example.com/records", nil)
+	r.SetPathValue("zone_id", "example.com")
+	h.APIListRecords(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestAPIListRecords_NullResponse(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`null`))
+	})
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/zones/example.com/records", nil)
+	r.SetPathValue("zone_id", "example.com")
+	h.APIListRecords(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	var records []models.RRSet
+	json.NewDecoder(w.Body).Decode(&records)
+	if records == nil {
+		t.Error("expected empty slice, got nil")
+	}
+}
+
+func TestAPICreateRecord_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	body := `{"name":"www.example.com","type":"A","ttl":300,"records":[{"content":"1.2.3.4"}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/zones/example.com/records", jsonBody(body))
+	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("zone_id", "example.com")
+	h.APICreateRecord(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestAPICreateRecord_InvalidJSON(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/zones/example.com/records", jsonBody(`bad`))
+	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("zone_id", "example.com")
+	h.APICreateRecord(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestAPIUpdateRecord_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	body := `{"name":"www.example.com","type":"A","ttl":600,"records":[{"content":"5.6.7.8"}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPut, "/api/v1/zones/example.com/records", jsonBody(body))
+	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("zone_id", "example.com")
+	h.APIUpdateRecord(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestAPIUpdateRecord_InvalidJSON(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPut, "/api/v1/zones/example.com/records", jsonBody(`bad`))
+	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("zone_id", "example.com")
+	h.APIUpdateRecord(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestAPIDeleteRecord_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	body := `{"name":"www.example.com","type":"A"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/api/v1/zones/example.com/records", jsonBody(body))
+	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("zone_id", "example.com")
+	h.APIDeleteRecord(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestAPIStats_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, nil)
+	defer pdnsSrv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/stats", nil)
+	h.APIStats(w, r)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
 func newTestHandlerWithPDNS(t *testing.T, handler func(w http.ResponseWriter, r *http.Request)) (*Handler, *httptest.Server) {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

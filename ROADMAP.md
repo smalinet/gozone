@@ -97,7 +97,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Test invalid IP (400)
 
 ### Insufficient Coverage (50-80%)
-- [ ] **Test PowerDNS error paths** for all API handlers
+- [x] **Test PowerDNS error paths** for all API handlers
   - `APIListZones`: PowerDNS error → 500
   - `APIGetZone`: zone not found → 404
   - `APICreateZone`: PowerDNS error → 500
