@@ -125,7 +125,7 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - PowerDNS error
 
 ### Integration Tests
-- [ ] **Create integration tests** (`internal/handlers/integration_test.go`)
+- [x] **Create integration tests** (`internal/handlers/integration_test.go`)
   - Complete web flow: login → cookie → authenticated request → logout
   - Complete API flow: API key → endpoint → JSON response
   - Unauthenticated access → redirect to /login
