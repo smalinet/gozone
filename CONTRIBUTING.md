@@ -86,6 +86,7 @@ just run
 | `just vet` | Run static analysis |
 | `just deps` | Download and tidy dependencies |
 | `just clean` | Remove build artifacts and database |
+| `just gosec` | Run security static analysis |
 | `just docker-up` | Start services with docker-compose |
 
 ## Code Standards
@@ -101,9 +102,15 @@ just vet   # go vet ./...
 
 ### Linting
 
-Currently the project runs `go vet`. Static analysis with `staticcheck` or `golangci-lint` is also encouraged:
+Currently the project runs `go vet`. Static analysis with `staticcheck`, `golangci-lint`, or `gosec` is also encouraged:
 
 ```bash
+# Install and run gosec (recommended)
+go install github.com/securego/gosec/v2/cmd/gosec@latest
+gosec ./...
+# or
+just gosec
+
 # Install golangci-lint (optional)
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 golangci-lint run ./...
@@ -316,6 +323,7 @@ Why is this needed? Link related issues.
 - [ ] godoc comments added for exported symbols
 - [ ] No hardcoded secrets or credentials
 - [ ] `go fmt ./... && go vet ./...` passes
+- [ ] `gosec ./...` passes with no HIGH/MEDIUM issues
 ```
 
 ## Review Process
@@ -333,7 +341,7 @@ Why is this needed? Link related issues.
 - Ensure new functionality has corresponding tests
 - Confirm no secrets, hardcoded credentials, or sensitive data are present
 - Validate SQL queries use parameterized placeholders (no string concatenation)
-- Approve only when `go fmt ./... && go vet ./...` and all tests pass
+- Approve only when `go fmt ./... && go vet ./... && gosec ./...` and all tests pass
 
 ### After Merge
 
