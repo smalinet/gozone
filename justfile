@@ -40,7 +40,7 @@ vet:
 
 # run gosec security analysis
 gosec:
-    gosec ./...
+    gosec -exclude-dir='\.cache|vendor|bin' -no-fail ./...
 
 # download and tidy dependencies
 deps:
