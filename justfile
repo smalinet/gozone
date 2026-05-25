@@ -38,6 +38,10 @@ fmt:
 vet:
     go vet ./...
 
+# run gosec security analysis
+gosec:
+    gosec ./...
+
 # download and tidy dependencies
 deps:
     go mod download
