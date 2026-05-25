@@ -4,7 +4,9 @@ package middleware
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -162,11 +164,10 @@ func Auth(db *database.DB, secret []byte) func(http.Handler) http.Handler {
 //  1. X-API-Key header
 //  2. Authorization header with "Bearer " prefix
 //
+// The incoming key is SHA-256 hashed before comparison against stored hashes.
 // Expired API keys return HTTP 401 with the message "api_key_expired".
 // The authenticated user is stored in the request context via UserContextKey
 // and the API key's last_used_at timestamp is updated on each request.
-//
-// Note: In production, the incoming key should be hashed before comparison.
 func APIKeyAuth(db *database.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -180,14 +181,13 @@ func APIKeyAuth(db *database.DB) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Look up API key hash
+			keyHash := hashAPIKey(authHeader)
+
 			var userID int64
 			var expiresAt sql.NullTime
-			// For API key auth, we compare hashes
-			// In production, hash the incoming key with SHA-256 before comparing
 			err := db.QueryRow(
 				"SELECT user_id, expires_at FROM api_keys WHERE key_hash = ?",
-				authHeader,
+				keyHash,
 			).Scan(&userID, &expiresAt)
 
 			if err != nil {
@@ -200,8 +200,7 @@ func APIKeyAuth(db *database.DB) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Update last used
-			db.Exec("UPDATE api_keys SET last_used_at = ? WHERE key_hash = ?", time.Now(), authHeader)
+			db.Exec("UPDATE api_keys SET last_used_at = ? WHERE key_hash = ?", time.Now(), keyHash)
 
 			user, err := loadUser(db, userID)
 			if err != nil || !user.Enabled {
@@ -213,6 +212,11 @@ func APIKeyAuth(db *database.DB) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func hashAPIKey(rawKey string) string {
+	h := sha256.Sum256([]byte(rawKey))
+	return hex.EncodeToString(h[:])
 }
 
 // RequireAdmin is a middleware that restricts access to users with the admin role.

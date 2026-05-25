@@ -123,6 +123,9 @@ func main() {
 			r.Get("/dashboard", h.Dashboard)
 			r.Get("/logout", h.Logout)
 			r.Get("/profile", h.ProfilePage)
+			r.Get("/profile/api-keys", h.ListAPIKeys)
+			r.Post("/profile/api-keys/create", h.CreateAPIKey)
+			r.Post("/profile/api-keys/delete", h.DeleteAPIKey)
 
 			// Zones (viewing accessible to all authenticated users)
 			r.Get("/zones", h.ListZones)

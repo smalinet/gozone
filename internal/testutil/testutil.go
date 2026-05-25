@@ -5,6 +5,8 @@
 package testutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -88,13 +90,16 @@ func SeedTestUser(t *testing.T, db *database.DB, username, password, role string
 
 // SeedTestAPIKey inserts an API key for the given user into the database.
 //
-// Pass nil for expiresAt to create a non-expiring key.
-func SeedTestAPIKey(t *testing.T, db *database.DB, userID int64, keyHash string, expiresAt *time.Time) {
+// The raw key is SHA-256 hashed before storage. Pass nil for expiresAt
+// to create a non-expiring key.
+func SeedTestAPIKey(t *testing.T, db *database.DB, userID int64, rawKey string, expiresAt *time.Time) {
 	t.Helper()
 	var expires interface{}
 	if expiresAt != nil {
 		expires = *expiresAt
 	}
+	h := sha256.Sum256([]byte(rawKey))
+	keyHash := hex.EncodeToString(h[:])
 	_, err := db.Exec(
 		`INSERT INTO api_keys (user_id, key_hash, description, expires_at) VALUES (?, ?, ?, ?)`,
 		userID, keyHash, "test key", expires,

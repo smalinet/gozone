@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -216,12 +218,14 @@ func seedTestUser(t *testing.T, db *database.DB, username, role string, enabled 
 	return id
 }
 
-func seedTestAPIKey(t *testing.T, db *database.DB, userID int64, keyHash string, expiresAt *time.Time) {
+func seedTestAPIKey(t *testing.T, db *database.DB, userID int64, rawKey string, expiresAt *time.Time) {
 	t.Helper()
 	var expires interface{}
 	if expiresAt != nil {
 		expires = *expiresAt
 	}
+	h := sha256.Sum256([]byte(rawKey))
+	keyHash := hex.EncodeToString(h[:])
 	_, err := db.Exec(
 		`INSERT INTO api_keys (user_id, key_hash, description, expires_at) VALUES (?, ?, ?, ?)`,
 		userID, keyHash, "test key", expires,
@@ -382,7 +386,7 @@ func TestAPIKeyAuth_LastUsedAtUpdated(t *testing.T) {
 	}
 
 	var lastUsed sql.NullTime
-	err := db.QueryRow("SELECT last_used_at FROM api_keys WHERE key_hash = ?", "used-key").Scan(&lastUsed)
+	err := db.QueryRow("SELECT last_used_at FROM api_keys WHERE key_hash = ?", hashAPIKey("used-key")).Scan(&lastUsed)
 	if err != nil {
 		t.Fatalf("query last_used_at: %v", err)
 	}
