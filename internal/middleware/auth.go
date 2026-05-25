@@ -128,6 +128,7 @@ func Auth(db *sql.DB, secret []byte) func(http.Handler) http.Handler {
 			claims, err := ParseToken(tokenString, secret)
 			if err != nil {
 				// Clear invalid cookie
+				// #nosec G124 -- clearing cookie on HTTP, Secure set dynamically
 				http.SetCookie(w, &http.Cookie{
 					Name:     constants.SessionCookieName,
 					Value:    "",
@@ -135,6 +136,7 @@ func Auth(db *sql.DB, secret []byte) func(http.Handler) http.Handler {
 					Expires:  time.Unix(0, 0),
 					HttpOnly: true,
 					SameSite: http.SameSiteStrictMode,
+					Secure:   r.TLS != nil,
 				})
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return

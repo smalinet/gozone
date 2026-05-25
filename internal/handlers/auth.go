@@ -68,6 +68,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// #nosec G124 -- Secure flag set dynamically via isSecure(r)
 	http.SetCookie(w, &http.Cookie{
 		Name:     constants.SessionCookieName,
 		Value:    token,
@@ -82,6 +83,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 // Logout clears the session cookie and redirects to /login.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	// #nosec G124 -- Secure flag set dynamically via isSecure(r)
 	http.SetCookie(w, &http.Cookie{
 		Name:     constants.SessionCookieName,
 		Value:    "",
