@@ -21,7 +21,6 @@ import (
 
 	"github.com/babykart/gozone/internal/config"
 	"github.com/babykart/gozone/internal/database"
-	"github.com/babykart/gozone/internal/dyndns"
 	"github.com/babykart/gozone/internal/handlers"
 	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
@@ -95,9 +94,8 @@ func main() {
 	)
 
 	// Rate limiters
-	loginLimiter := middleware.NewRateLimiter(5)   // 5 requests per minute per IP
-	apiLimiter := middleware.NewRateLimiter(100)   // 100 requests per minute per API key
-	dyndnsLimiter := middleware.NewRateLimiter(10) // 10 requests per minute per user
+	loginLimiter := middleware.NewRateLimiter(5) // 5 requests per minute per IP
+	apiLimiter := middleware.NewRateLimiter(100) // 100 requests per minute per API key
 
 	// CSRF-protected web UI routes (login + authenticated)
 	r.Group(func(r chi.Router) {
@@ -177,15 +175,6 @@ func main() {
 		r.Put("/zones/{zone_id}/records", h.APIUpdateRecord)
 		r.Delete("/zones/{zone_id}/records", h.APIDeleteRecord)
 		r.Get("/stats", h.APIStats)
-	})
-
-	// DynDNS endpoint (Basic Auth, no web middleware)
-	dyndnsHandler := dyndns.NewHandler(db, pdnsClient, "")
-	r.With(dyndnsLimiter.Limit(middleware.ExtractUsername)).Get("/nic/update", func(w http.ResponseWriter, r *http.Request) {
-		dyndnsHandler.ServeHTTP(w, r)
-	})
-	r.With(dyndnsLimiter.Limit(middleware.ExtractUsername)).Post("/nic/update", func(w http.ResponseWriter, r *http.Request) {
-		dyndnsHandler.ServeHTTP(w, r)
 	})
 
 	// Health checks

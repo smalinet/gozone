@@ -34,10 +34,6 @@ Write co-located `*_test.go` when adding code.
 ## Auth Patterns
 
 | Layer | Auth Method |
-|-------|-------------|
-| Web UI | JWT in `gozone_session` cookie |
-| REST API | `X-API-Key` header (or `Authorization: Bearer`) |
-| DynDNS | HTTP Basic Auth against local user DB |
 
 ## Key Constraints
 

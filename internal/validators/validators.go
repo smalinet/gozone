@@ -142,8 +142,7 @@ func ValidateEmail(email string) error {
 
 // ValidateIPAddress checks that a string is a valid IPv4 or IPv6 address.
 //
-// Returns nil if valid, an error otherwise. This is used by the DynDNS
-// handler to validate the myip/ip parameter.
+// Returns nil if valid, an error otherwise.
 func ValidateIPAddress(ip string) error {
 	if ip == "" {
 		return fmt.Errorf("IP address must not be empty")

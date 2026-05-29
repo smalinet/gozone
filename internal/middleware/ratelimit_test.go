@@ -195,20 +195,3 @@ func TestExtractAPIKey(t *testing.T) {
 		}
 	})
 }
-
-func TestExtractUsername(t *testing.T) {
-	t.Run("basic auth", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodGet, "/", nil)
-		r.SetBasicAuth("myuser", "mypass")
-		if got := ExtractUsername(r); got != "myuser" {
-			t.Errorf("expected myuser, got %s", got)
-		}
-	})
-
-	t.Run("no auth", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodGet, "/", nil)
-		if got := ExtractUsername(r); got != "" {
-			t.Errorf("expected empty, got %s", got)
-		}
-	})
-}

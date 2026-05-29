@@ -133,8 +133,7 @@ GoZone follows a layered architecture:
 cmd/gozone/main.go        Entry point, routing, wiring
 internal/config/          Configuration (YAML + env vars)
 internal/database/        SQLite connection and migrations
-internal/dyndns/          DynDNS 2 protocol handler
-internal/handlers/        HTTP handlers (web UI + REST API)
+internal/handlers/          HTTP handlers (web UI + REST API)
 internal/middleware/       JWT auth, API key auth, admin guard
 internal/models/          Shared data structures
 internal/pdns/            PowerDNS REST API client
@@ -177,7 +176,6 @@ Use Go 1.22+ `r.PathValue("name")` to extract URL path parameters — **not** `c
 |-------|--------|
 | Web UI | JWT token in `gozone_session` cookie (HttpOnly, SameSite=Lax) |
 | REST API | `X-API-Key` header or `Authorization: Bearer` |
-| DynDNS | HTTP Basic Auth against local user DB |
 
 ### Naming
 
@@ -269,8 +267,8 @@ GoZone follows the [Conventional Commits](https://www.conventionalcommits.org/en
 ```
 feat(handlers): [gozone] add batch record import endpoint
 fix(middleware): [gozone] clear expired tokens from database
-docs(readme): [gozone] add DynDNS configuration example
-test(dyndns): [gozone] cover IPv6 update path
+docs(readme): [gozone] add API configuration example
+test(handlers): [gozone] cover IP validation
 chore(deps): [gozone] bump golang-jwt to v5.2.3
 refactor(pdns): [gozone] extract zone service interface
 ```

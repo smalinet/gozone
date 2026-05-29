@@ -11,7 +11,6 @@ A clean web interface for managing PowerDNS authoritative DNS servers.
 - **User Management**: Admin and user roles with access control
 - **Activity Logging**: Track all zone and user operations
 - **REST API**: JSON API for zone and record automation
-- **DynDNS 2 Support**: Dynamic DNS updates via `/nic/update` endpoint
 - **PowerDNS Integration**: Communicates through the PowerDNS REST API
 - **DNSSEC Support**: Zone rectification and slave notification
 - **Single Binary**: Compiled Go binary with embedded SQLite database
@@ -117,14 +116,6 @@ DELETE /api/v1/zones/{zone_id}/records - Delete record
 GET    /api/v1/stats                  - Server statistics
 ```
 
-## DynDNS
-
-```
-GET/POST /nic/update?hostname=myhost.example.com&myip=1.2.3.4
-```
-
-Uses HTTP Basic Auth with user credentials from the local database.
-
 ## Justfile Commands
 
 | Command | Description |
@@ -158,7 +149,6 @@ gozone/
 ├── internal/
 │   ├── config/config.go      # Configuration management
 │   ├── database/database.go  # SQLite database layer
-│   ├── dyndns/               # DynDNS protocol support
 │   ├── handlers/             # HTTP handlers (web UI + API)
 │   ├── middleware/auth.go     # JWT authentication
 │   ├── models/               # Data models

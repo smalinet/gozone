@@ -121,12 +121,3 @@ func ExtractAPIKey(r *http.Request) string {
 	}
 	return ""
 }
-
-// ExtractUsername extracts the username from HTTP Basic Auth credentials.
-func ExtractUsername(r *http.Request) string {
-	user, _, ok := r.BasicAuth()
-	if !ok {
-		return ""
-	}
-	return user
-}

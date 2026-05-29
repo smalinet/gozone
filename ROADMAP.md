@@ -39,7 +39,6 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Install `golang.org/x/time/rate`
   - Limit `/login` to 5 attempts per minute per IP
   - Limit `/api/v1/*` to 100 requests per minute per API key
-  - Limit `/nic/update` to 10 requests per minute per user
   - Return HTTP 429 with `Retry-After` header
 
 - [x] **Mask internal errors** in API responses
@@ -85,17 +84,6 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Disabled user rejected
   - `loadUser()`: success, error, enabled conversion
 
-- [x] **Fix and test DynDNS completely** (`internal/dyndns/dyndns_test.go`)
-  - Add in-memory database with bcrypt-hashed users to `setupTestHandler()`
-  - Test complete flow: auth → validateUser → findZone → updateRecord → "good"
-  - Test `validateUser()`: success, user not found, wrong password, disabled user
-  - Test `findZone()`: exact match, subdomain match, trailing dot, no match
-  - Test `updateRecord()`: success, PowerDNS error
-  - Test IPv6 (AAAA records)
-  - Test multiple hostnames (comma-separated)
-  - Test fallback `myip` → `ip` → `RemoteAddr`
-  - Test invalid IP (400)
-
 ### Insufficient Coverage (50-80%)
 - [x] **Test PowerDNS error paths** for all API handlers
   - `APIListZones`: PowerDNS error → 500
@@ -130,7 +118,6 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Complete API flow: API key → endpoint → JSON response
   - Unauthenticated access → redirect to /login
   - Non-admin access to admin endpoints → 403
-  - DynDNS: Basic Auth → update → verification
 
 ### Test Infrastructure
 - [x] **Create `internal/testutil/` package** with reusable helpers
@@ -273,9 +260,6 @@ List of tasks to improve the security, quality, and performance of GoZone.
   - Or use `sql.ErrNoRows` properly
 
 - [ ] **Add TODO/FIXME comments** for known limitations
-  - Document that SQLite doesn't scale horizontally
-  - Document lack of clustering
-  - Document DynDNS limitations (no wildcards, etc.)
 
 ### Documentation
 - [x] **Improve inline documentation**
@@ -320,7 +304,6 @@ List of tasks to improve the security, quality, and performance of GoZone.
 
 ### Test Coverage
 - [x] Reach > 80% on `internal/middleware` (currently **95.2%**)
-- [x] Reach > 80% on `internal/dyndns` (currently **78.2%** — close, improved from 20.5%)
 - [ ] Reach > 80% on `internal/handlers` (currently **76.7%**, improved from 67.5%)
 - [x] Reach > 90% on `internal/config` (currently **89.6%**, slight drop from 91.9% due to added code)
 - [ ] Reach > 90% on `internal/pdns` (currently **77.3%**, improved from 73.8%)

@@ -11,7 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/babykart/gozone/internal/constants"
-	"github.com/babykart/gozone/internal/dyndns"
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/models"
 )
@@ -221,39 +220,5 @@ func TestIntegration_NonAdminBlockedFromAdminEndpoints(t *testing.T) {
 				t.Errorf("expected 403, got %d", w.Code)
 			}
 		})
-	}
-}
-
-func TestIntegration_DynDNSBasicAuthFlow(t *testing.T) {
-	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones") && !strings.Contains(r.URL.Path, "/zones/") {
-			json.NewEncoder(w).Encode([]models.Zone{
-				{ID: "example.com.", Name: "example.com", Kind: "Native"},
-			})
-			return
-		}
-		if r.Method == http.MethodPatch {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	})
-	defer pdnsSrv.Close()
-
-	_ = seedIntegrationUser(t, h, "dyndnsuser", "dyndnspass", "user", true)
-
-	dyndnsH := dyndns.NewHandler(h.DB, h.PDNS, "")
-
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/nic/update?hostname=www.example.com&myip=1.2.3.4", nil)
-	r.SetBasicAuth("dyndnsuser", "dyndnspass")
-	dyndnsH.ServeHTTP(w, r)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: body=%s", w.Code, w.Body.String())
-	}
-	if !strings.Contains(w.Body.String(), "good 1.2.3.4") {
-		t.Errorf("expected 'good 1.2.3.4', got %q", w.Body.String())
 	}
 }

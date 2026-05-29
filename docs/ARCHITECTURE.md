@@ -16,27 +16,27 @@ This document describes the internal architecture of GoZone, a PowerDNS manageme
 ## Component Diagram
 
 ```
-                        Client
-                          │
-        ┌─────────────────┼─────────────────-┐
-        │                 │                  │
-   Web Browser        REST Client       DynDNS Client
-   (JWT cookie)      (X-API-Key)       (Basic Auth)
-        │                 │                  │
-        ▼                 ▼                  ▼
-┌───────────────────────────────────────────────────┐
-│                 chi Router (chi v5)               │
-│                                                   │
-│  ┌──────────┐  ┌──────────────┐  ┌─────────────┐  │
-│  │ Public   │  │ Web UI Group │  │ API v1 Group│  │
-│  │ routes   │  │ (Auth MW)    │  │ (APIKey MW) │  │
-│  └──────────┘  └──────────────┘  └─────────────┘  │
-└─────────────────────┬─────────────────────────────┘
-                      │
-              ┌───────▼────────┐
-              │   Handlers     │
-              │(Handler struct)│
-              └───┬───────┬────┘
+                         Client
+                           │
+         ┌─────────────────┴─────────────────┐
+         │                                   │
+   Web Browser                         REST Client
+   (JWT cookie)                      (X-API-Key)
+         │                                   │
+         ▼                                   ▼
+┌────────────────────────────────────────────────────┐
+│                chi Router (chi v5)                 │
+│                                                    │
+│  ┌──────────┐  ┌───────────────┐  ┌─────────────┐ │
+│  │ Public   │  │  Web UI Group │  │ API v1 Group│ │
+│  │ routes   │  │  (Auth MW)    │  │(APIKey MW)  │ │
+│  └──────────┘  └───────────────┘  └─────────────┘ │
+└──────────────────────┬─────────────────────────────┘
+                       │
+                ┌──────▼───────┐
+                │   Handlers   │
+                │(Handler str.)│
+                └───┬──────┬───┘
                   │       │
     ┌─────────────▼─┐ ┌──▼──────────────┐
     │  SQLite DB    │ │  PowerDNS API   │
@@ -57,7 +57,6 @@ cmd/gozone/       Application entry point, wiring, and route registration
 internal/
   config/         YAML configuration loading with GOZONE_ env var overrides
   database/       SQLite connection management and schema migrations
-  dyndns/         DynDNS v2 protocol handler (nic/update endpoint)
   handlers/       HTTP handlers for Web UI, REST API, and health checks
   middleware/     JWT authentication, API key auth, admin guard, user context
   models/         Shared data structures and JSON serialization
@@ -67,9 +66,8 @@ internal/
 ### Dependency Graph
 
 ```
-cmd/gozone ──► config, database, dyndns, handlers, middleware, pdns
+cmd/gozone ──► config, database, handlers, middleware, pdns
 handlers   ──► middleware, models, pdns
-dyndns     ──► models, pdns
 middleware ──► models
 pdns       ──► config, models
 database   ──► config
@@ -83,7 +81,6 @@ database   ──► config
 | `handlers` | Business logic for each endpoint: parse input, call PDNS client, log activity, render templates or write JSON |
 | `pdns` | HTTP client for PowerDNS REST API: zone CRUD, record management, DNSSEC rectification, statistics |
 | `middleware` | Request pipeline: extract JWT/API key, load user from DB, inject into context, enforce admin role |
-| `dyndns` | Standalone protocol handler: Basic Auth, zone resolution, record update |
 | `database` | Connection factory with DSN validation, schema migrations, connection pool config |
 | `models` | Pure data structures — no behavior, just struct tags for JSON and SQL |
 | `config` | Hierarchical config merging: defaults → YAML file → env vars |
@@ -153,27 +150,9 @@ Client ──POST /api/v1/zones──► chi Router
                           JSON Response ──► Client
 ```
 
-### DynDNS: Update IP
-
-```
-Router/NAS ──GET /nic/update?hostname=my.dom.tld&myip=1.2.3.4──► chi Router
-                                │
-                                ▼
-                          dyndns.ServeHTTP
-                          ┌──────────────────────┐
-                          │ Extract Basic Auth   │
-                          │ validateUser (DB)    │
-                          │ PDNS.ListZones       │── HTTP ──► PowerDNS ──► [Zone...]
-                          │ findZone (best match)│
-                          │ PDNS.UpdateRecord    │── HTTP ──► PowerDNS ──► ok
-                          └───────┬──────────────┘
-                                  ▼
-                          "good 1.2.3.4" ──► Client
-```
-
 ## Authentication Flows
 
-GoZone implements three separate authentication channels:
+GoZone implements two separate authentication channels:
 
 ### Web UI (JWT Cookies)
 
@@ -214,18 +193,6 @@ middleware.APIKeyAuth middleware
   ├── loadUser(DB, UserID) → ensure enabled
   ├── UPDATE api_keys SET last_used_at = NOW()
   └── context.WithValue(UserContextKey, user)
-```
-
-### DynDNS (HTTP Basic Auth)
-
-```
-Request with Authorization: Basic <base64(user:pass)>
-  │
-  ▼
-dyndns.validateUser(username, password)
-  ├── SELECT password_hash FROM users WHERE username = ?
-  ├── bcrypt.CompareHashAndPassword(hash, password)
-  └── return true/false
 ```
 
 ## Database Schema

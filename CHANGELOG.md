@@ -69,7 +69,6 @@
 - **(api)** ([76fa8fc](https://github.com/babykart/gozone/commit/76fa8fc489344224bcedebb7608ab6b9ebb919f4)) - [gozone] test PowerDNS error paths - ([babykart](https://github.com/babykart))
 - **(auth)** ([41cfe54](https://github.com/babykart/gozone/commit/41cfe54fe27c37224d8fa7159bc2ee1ee7bc2102)) - [gozone] Test APIKeyAuth() completely - ([babykart](https://github.com/babykart))
 - **(auth)** ([1a7d7cf](https://github.com/babykart/gozone/commit/1a7d7cf432a0b3c10cbce1a176ebd3ce26175017)) - [gozone] test Auth() middleware completely - ([babykart](https://github.com/babykart))
-- **(dyndns)** ([fcaba50](https://github.com/babykart/gozone/commit/fcaba50aaee0373636e4615fdb6707f97c087074)) - [gozone] fix and test DynDNS completely - ([babykart](https://github.com/babykart))
 - **(handlers)** ([0d7ab97](https://github.com/babykart/gozone/commit/0d7ab973025b50ee7bc47efbfa470fc5fbb896c6)) - [gozone] add integration tests - ([babykart](https://github.com/babykart))
 - **(infra)** ([8a9af80](https://github.com/babykart/gozone/commit/8a9af80d1849fb0448345c2b2566ab49325da666)) - [gozone] create internal/testutil package - ([babykart](https://github.com/babykart))
 - **(infra)** ([2be1de9](https://github.com/babykart/gozone/commit/2be1de91ecbad550e40f4677e7ff34b5486f8c25)) - [gozone] introduce ZoneService interface - ([babykart](https://github.com/babykart))
