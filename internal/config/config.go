@@ -120,9 +120,9 @@ func Load(path string) (*Config, error) {
 	// Environment variable overrides
 	applyEnvOverrides(cfg)
 
-	// Auto-generate a secret key if the default placeholder is still in use.
-	// This prevents deployments from running with a well-known default key.
-	if cfg.Server.SecretKey == defaultSecretKey {
+	// Auto-generate a secret key if a well-known placeholder is still in use.
+	// This prevents deployments from running with a publicly known default key.
+	if isPlaceholderSecret(cfg.Server.SecretKey) {
 		key, err := generateSecretKey()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate secret key: %w", err)
@@ -170,8 +170,23 @@ func applyEnvOverrides(cfg *Config) {
 	}
 }
 
-// defaultSecretKey is the placeholder value that triggers auto-generation.
+// defaultSecretKey is the placeholder value baked into DefaultConfig.
 const defaultSecretKey = "change-me-to-a-random-secret"
+
+// placeholderSecrets lists the well-known placeholder secret keys that must
+// never be used as a real signing key. Any of these triggers auto-generation
+// at startup. Includes the value shipped in the sample config.yaml so that
+// running with the unmodified example never uses a publicly known key.
+var placeholderSecrets = map[string]bool{
+	defaultSecretKey:                   true,
+	"change-me-to-a-random-secret-key": true,
+}
+
+// isPlaceholderSecret reports whether the given secret key is empty or one of
+// the well-known insecure placeholders.
+func isPlaceholderSecret(key string) bool {
+	return key == "" || placeholderSecrets[key]
+}
 
 // generateSecretKey produces a cryptographically random 32-byte key
 // encoded as a hexadecimal string (64 characters).

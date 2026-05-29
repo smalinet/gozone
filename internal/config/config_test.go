@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -124,6 +125,34 @@ func TestLoad_AutoGenerateSecretKey(t *testing.T) {
 	}
 	if len(decoded) != 32 {
 		t.Errorf("expected 32-byte key, got %d bytes", len(decoded))
+	}
+}
+
+func TestLoad_AutoGenerateFromConfigPlaceholder(t *testing.T) {
+	// The sample config.yaml ships a placeholder secret key. Loading a config
+	// that still carries any well-known placeholder must trigger generation,
+	// never run with the publicly known value.
+	for _, placeholder := range []string{
+		defaultSecretKey,
+		"change-me-to-a-random-secret-key", // value shipped in config.yaml
+	} {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "config.yaml")
+		content := "server:\n  secret_key: \"" + placeholder + "\"\n"
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+
+		cfg, err := Load(path)
+		if err != nil {
+			t.Fatalf("Load failed: %v", err)
+		}
+		if cfg.Server.SecretKey == placeholder {
+			t.Errorf("placeholder %q must be replaced by a generated key", placeholder)
+		}
+		if len(cfg.Server.SecretKey) != 64 {
+			t.Errorf("expected 64-char generated key, got %d chars", len(cfg.Server.SecretKey))
+		}
 	}
 }
 
