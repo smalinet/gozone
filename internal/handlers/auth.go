@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -11,6 +12,17 @@ import (
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/models"
 )
+
+var (
+	dummyHashOnce sync.Once
+	dummyHash     []byte
+)
+
+func ensureDummyHash(cost int) {
+	dummyHashOnce.Do(func() {
+		dummyHash, _ = bcrypt.GenerateFromPassword([]byte("constant-time-dummy"), cost)
+	})
+}
 
 // LoginPage renders the login form (GET /login).
 func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +48,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	var enabled int
+	ensureDummyHash(h.Cfg.Auth.BcryptCost)
 	err := h.DB.QueryRow(
 		`SELECT id, username, email, password_hash, first_name, last_name, role, enabled, created_at, updated_at
 		 FROM users WHERE username = ? AND enabled = 1`, username,
@@ -47,6 +60,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	user.Enabled = enabled == 1
 
 	if err == sql.ErrNoRows {
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 		http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
 		return
 	}
