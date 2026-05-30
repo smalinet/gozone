@@ -16,6 +16,7 @@
             <a href="/dashboard">Dashboard</a>
             <a href="/zones">Zones</a>
             {{if .IsAdmin}}<a href="/users">Users</a>{{end}}
+            {{if .IsAdmin}}<a href="/groups">Groups</a>{{end}}
             <div class="nav-user">
                 <span>{{.User.Username}}</span>
                 <a href="/logout" class="btn-logout">Logout</a>

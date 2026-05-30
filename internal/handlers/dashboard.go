@@ -18,8 +18,9 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	// Get server info
 	server, _ := h.PDNS.GetServer()
 
-	// Get zone count
+	// Get zone count (filtered by user's allowed zones)
 	zones, _ := h.PDNS.ListZones()
+	zones, _ = h.filterZonesForUser(r, zones)
 	zoneCount := 0
 	if zones != nil {
 		zoneCount = len(zones)

@@ -21,6 +21,11 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	zones, _ = h.filterZonesWithInfoForUser(r, zones)
+	if zones == nil {
+		zones = []models.ZoneWithInfo{}
+	}
+
 	data := map[string]interface{}{
 		"Title":   "Zones - GoZone",
 		"User":    user,

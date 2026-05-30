@@ -124,16 +124,21 @@ func main() {
 			r.Post("/profile/api-keys/create", h.CreateAPIKey)
 			r.Post("/profile/api-keys/delete", h.DeleteAPIKey)
 
-			// Zones (viewing accessible to all authenticated users)
+			// Zones list (filtered by group membership for non-admin users)
 			r.Get("/zones", h.ListZones)
-			r.Get("/zones/{zone_id}", h.ViewZone)
 
-			// Records (accessible to all authenticated users)
-			r.Get("/zones/{zone_id}/records/new", h.CreateRecordPage)
-			r.Post("/zones/{zone_id}/records/create", h.CreateRecord)
-			r.Get("/zones/{zone_id}/records/edit", h.EditRecordPage)
-			r.Post("/zones/{zone_id}/records/update", h.UpdateRecord)
-			r.Post("/zones/{zone_id}/records/delete", h.DeleteRecord)
+			// Zone-specific routes with group authorization
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.CheckZoneAccess(db))
+
+				r.Get("/zones/{zone_id}", h.ViewZone)
+
+				r.Get("/zones/{zone_id}/records/new", h.CreateRecordPage)
+				r.Post("/zones/{zone_id}/records/create", h.CreateRecord)
+				r.Get("/zones/{zone_id}/records/edit", h.EditRecordPage)
+				r.Post("/zones/{zone_id}/records/update", h.UpdateRecord)
+				r.Post("/zones/{zone_id}/records/delete", h.DeleteRecord)
+			})
 
 			// Admin-only routes
 			r.Group(func(r chi.Router) {
@@ -151,6 +156,17 @@ func main() {
 				r.Get("/users/{user_id}/edit", h.EditUserPage)
 				r.Post("/users/{user_id}/update", h.UpdateUser)
 				r.Post("/users/delete", h.DeleteUser)
+
+				r.Get("/groups", h.ListGroups)
+				r.Get("/groups/new", h.CreateGroupPage)
+				r.Post("/groups/create", h.CreateGroup)
+				r.Get("/groups/{group_id}/edit", h.EditGroupPage)
+				r.Post("/groups/{group_id}/update", h.UpdateGroup)
+				r.Post("/groups/{group_id}/delete", h.DeleteGroup)
+				r.Post("/groups/{group_id}/add-member", h.AddMemberToGroup)
+				r.Post("/groups/{group_id}/remove-member", h.RemoveMemberFromGroup)
+				r.Post("/groups/{group_id}/add-zone", h.AddZoneToGroup)
+				r.Post("/groups/{group_id}/remove-zone", h.RemoveZoneFromGroup)
 			})
 		})
 	})
@@ -164,14 +180,24 @@ func main() {
 		r.Use(apiLimiter.Limit(middleware.ExtractAPIKey))
 
 		r.Get("/zones", h.APIListZones)
-		r.Post("/zones", h.APICreateZone)
-		r.Get("/zones/{zone_id}", h.APIGetZone)
-		r.Delete("/zones/{zone_id}", h.APIDeleteZone)
-		r.Get("/zones/{zone_id}/records", h.APIListRecords)
-		r.Post("/zones/{zone_id}/records", h.APICreateRecord)
-		r.Put("/zones/{zone_id}/records", h.APIUpdateRecord)
-		r.Delete("/zones/{zone_id}/records", h.APIDeleteRecord)
 		r.Get("/stats", h.APIStats)
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireAdmin)
+
+			r.Post("/zones", h.APICreateZone)
+			r.Delete("/zones/{zone_id}", h.APIDeleteZone)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.CheckZoneAccess(db))
+
+			r.Get("/zones/{zone_id}", h.APIGetZone)
+			r.Get("/zones/{zone_id}/records", h.APIListRecords)
+			r.Post("/zones/{zone_id}/records", h.APICreateRecord)
+			r.Put("/zones/{zone_id}/records", h.APIUpdateRecord)
+			r.Delete("/zones/{zone_id}/records", h.APIDeleteRecord)
+		})
 	})
 
 	// Health checks
