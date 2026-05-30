@@ -283,23 +283,3 @@ func TestDeriveKeys_DifferentMaster(t *testing.T) {
 		t.Error("different master secrets must produce different JWT keys")
 	}
 }
-
-func TestParseIntOr(t *testing.T) {
-	tests := []struct {
-		input string
-		def   int
-		want  int
-	}{
-		{"123", 0, 123},
-		{"0", 42, 0},
-		{"abc", 42, 42},
-		{"", 42, 0},
-		{"12a34", 42, 42},
-	}
-	for _, tt := range tests {
-		got := parseIntOr(tt.input, tt.def)
-		if got != tt.want {
-			t.Errorf("parseIntOr(%q, %d) = %d, want %d", tt.input, tt.def, got, tt.def)
-		}
-	}
-}

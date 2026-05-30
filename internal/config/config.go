@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -168,7 +169,11 @@ func applyEnvOverrides(cfg *Config) {
 		cfg.Server.Host = v
 	}
 	if v := os.Getenv("GOZONE_SERVER_PORT"); v != "" {
-		cfg.Server.Port = parseIntOr(v, cfg.Server.Port)
+		if n, err := strconv.Atoi(v); err != nil {
+			logger.Warn("invalid GOZONE_SERVER_PORT, using default", "value", v, "error", err)
+		} else {
+			cfg.Server.Port = n
+		}
 	}
 	if v := os.Getenv("GOZONE_SECRET_KEY"); v != "" {
 		cfg.Server.SecretKey = v
@@ -192,7 +197,11 @@ func applyEnvOverrides(cfg *Config) {
 		cfg.PowerDNS.ServerID = v
 	}
 	if v := os.Getenv("GOZONE_SESSION_DURATION"); v != "" {
-		cfg.Auth.SessionDurationHours = parseIntOr(v, cfg.Auth.SessionDurationHours)
+		if n, err := strconv.Atoi(v); err != nil {
+			logger.Warn("invalid GOZONE_SESSION_DURATION, using default", "value", v, "error", err)
+		} else {
+			cfg.Auth.SessionDurationHours = n
+		}
 	}
 }
 
@@ -238,17 +247,6 @@ func generateSecretKey() (string, error) {
 		return "", fmt.Errorf("generate secret key: %w", err)
 	}
 	return hex.EncodeToString(b), nil
-}
-
-func parseIntOr(s string, defaultVal int) int {
-	var n int
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return defaultVal
-		}
-		n = n*10 + int(c-'0')
-	}
-	return n
 }
 
 // parseBoolOr parses a boolean environment value, returning defaultVal for
