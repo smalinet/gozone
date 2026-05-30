@@ -61,8 +61,8 @@ For security vulnerabilities, **do not open a public issue**. Contact the mainta
 ```bash
 git clone https://github.com/babykart/gozone.git
 cd gozone
-just deps
-just run
+make deps   # or: just deps
+make run    # or: just run
 # Open http://localhost:8080 — admin / admin
 ```
 
@@ -74,20 +74,21 @@ just run
 | `GOZONE_ADMIN_PASSWORD` | Initial admin password | `admin` |
 | `GOZONE_SECRET_KEY` | JWT signing key | `change-me-to-a-random-secret` |
 
-### Justfile Quick Reference
+### Quick Reference
 
-| Command | Purpose |
-|---------|---------|
-| `just build` | Compile binary to `./bin/gozone` |
-| `just run` | Build and start server |
-| `just test` | Run all tests |
-| `just test-verbose` | Run tests with verbose output |
-| `just fmt` | Format all Go source files |
-| `just vet` | Run static analysis |
-| `just deps` | Download and tidy dependencies |
-| `just clean` | Remove build artifacts and database |
-| `just gosec` | Run security static analysis |
-| `just docker-up` | Start services with docker-compose |
+| Make command | Just command | Purpose |
+|-------------|--------------|---------|
+| `make build` | `just build` | Compile binary to `./bin/gozone` |
+| `make run` | `just run` | Build and start server |
+| `make test` | `just test` | Run all tests |
+| `make test-verbose` | `just test-verbose` | Run tests with verbose output |
+| `make fmt` | `just fmt` | Format all Go source files |
+| `make vet` | `just vet` | Run static analysis |
+| `make deps` | `just deps` | Download and tidy dependencies |
+| `make clean` | `just clean` | Remove build artifacts and database |
+| `make gosec` | `just gosec` | Run security static analysis |
+| `make docker-up` | `just docker-up` | Start services with docker-compose |
+| `make update` | `just update` | Update all dependencies |
 
 ## Code Standards
 
@@ -96,8 +97,8 @@ just run
 All code must pass `go fmt ./...` before submission. The project uses `tab` indentation as per standard Go conventions.
 
 ```bash
-just fmt   # go fmt ./...
-just vet   # go vet ./...
+make fmt   # go fmt ./...
+make vet   # go vet ./...
 ```
 
 ### Linting
@@ -109,7 +110,7 @@ Currently the project runs `go vet`. Static analysis with `staticcheck`, `golang
 go install github.com/securego/gosec/v2/cmd/gosec@latest
 gosec ./...
 # or
-just gosec
+make gosec   # or: just gosec
 
 # Install golangci-lint (optional)
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -287,9 +288,9 @@ refactor(pdns): [gozone] extract zone service interface
 4. **Run tests locally** before pushing:
 
 ```bash
-just fmt
-just vet
-just test
+make fmt
+make vet
+make test
 ```
 
 5. **Update documentation** if your change affects user-facing behavior:

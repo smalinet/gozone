@@ -22,10 +22,10 @@ A clean web interface for managing PowerDNS authoritative DNS servers.
 
 ```bash
 # Download dependencies
-just deps
+make deps   # or: just deps
 
 # Build and run
-just run
+make run    # or: just run
 ```
 
 Open http://localhost:8080 — default admin credentials: `admin` / `admin`
@@ -34,10 +34,10 @@ Open http://localhost:8080 — default admin credentials: `admin` / `admin`
 
 ```bash
 # Start with docker-compose (includes PowerDNS)
-just docker-up
+make docker-up   # or: just docker-up
 
 # Or build and run standalone
-just docker-build
+make docker-build   # or: just docker-build
 docker run -d -p 8080:8080 gozone
 ```
 
@@ -116,28 +116,29 @@ DELETE /api/v1/zones/{zone_id}/records - Delete record
 GET    /api/v1/stats                  - Server statistics
 ```
 
-## Justfile Commands
+## Commands
 
-| Command | Description |
-|---------|-------------|
-| `just build` | Build the binary |
-| `just run` | Build and run locally |
-| `just test` | Run tests |
-| `just test-verbose` | Run tests with verbose output |
-| `just clean` | Remove build artifacts and database |
-| `just fmt` | Format all source files |
-| `just vet` | Run vet on all packages |
-| `just deps` | Download and tidy dependencies |
-| `just docker-build` | Build Docker image |
-| `just docker-up` | Start services with docker-compose |
-| `just docker-down` | Stop services |
+| Make | Just | Description |
+|------|------|-------------|
+| `make build` | `just build` | Build the binary |
+| `make run` | `just run` | Build and run locally |
+| `make test` | `just test` | Run tests |
+| `make test-verbose` | `just test-verbose` | Run tests with verbose output |
+| `make clean` | `just clean` | Remove build artifacts and database |
+| `make fmt` | `just fmt` | Format all source files |
+| `make vet` | `just vet` | Run vet on all packages |
+| `make deps` | `just deps` | Download and tidy dependencies |
+| `make docker-build` | `just docker-build` | Build Docker image |
+| `make docker-up` | `just docker-up` | Start services with docker-compose |
+| `make docker-down` | `just docker-down` | Stop services |
+| `make update` | `just update` | Update all dependencies |
 
 ## Building from Source
 
 Requirements: Go 1.26+
 
 ```bash
-just build
+make build   # or: just build
 ./bin/gozone -config config.yaml
 ```
 
@@ -157,7 +158,8 @@ gozone/
 │   ├── templates/            # Go HTML templates
 │   └── static/               # CSS, JS
 ├── config.yaml               # Default configuration
-├── justfile                  # Task runner
+├── justfile                  # Task runner (just)
+├── Makefile                  # Task runner (make)
 ├── Dockerfile
 ├── docker-compose.yml
 └── go.mod

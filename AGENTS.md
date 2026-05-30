@@ -8,17 +8,18 @@
 
 ## Build & Test
 
-| Command | Description |
-|---------|-------------|
-| `go build ./cmd/gozone` | Build binary |
-| `go run ./cmd/gozone` | Run server |
-| `go test ./...` | All tests |
-| `go test -v ./...` | Verbose tests |
-| `go fmt ./... && go vet ./...` | Lint + static analysis |
-| `just deps` | `go mod download && go mod tidy` (order matters) |
-| `just run` | Build + run |
-| `just test` | `go test ./...` |
-| `just fmt` / `just vet` | Format / vet |
+| Make command | Just command | Purpose |
+|-------------|--------------|---------|
+| `make build` | `just build` | Build binary to `./bin/gozone` |
+| `make run` | `just run` | Build and start server |
+| `make test` | `just test` | Run all tests |
+| `make test-verbose` | `just test-verbose` | Run tests with verbose output |
+| `make fmt` | `just fmt` | Format all Go source files |
+| `make vet` | `just vet` | Run static analysis |
+| `make deps` | `just deps` | Download and tidy dependencies |
+| `make clean` | `just clean` | Remove build artifacts and database |
+| `make gosec` | `just gosec` | Run security static analysis |
+| `make update` | `just update` | Update all dependencies |
 
 Write co-located `*_test.go` when adding code.
 
