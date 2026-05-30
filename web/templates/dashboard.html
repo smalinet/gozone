@@ -1,78 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="/dashboard">GoZone</a>
-            <span class="nav-subtitle">PowerDNS Admin</span>
-        </div>
-        <div class="nav-links">
-            <a href="/dashboard" class="active">Dashboard</a>
-            <a href="/zones">Zones</a>
-            <a href="/profile">Profile</a>
-            <a href="/profile/api-keys">API Keys</a>
-            {{if .IsAdmin}}<a href="/users">Users</a>{{end}}
-            {{if .IsAdmin}}<a href="/groups">Groups</a>{{end}}
-            <div class="nav-user">
-                <span>{{.User.Username}}</span>
-                <a href="/logout" class="btn-logout">Logout</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+{{define "dashboard.html"}}
+{{template "head" .}}
+<div class="app-layout">
+    {{template "sidebar" .}}
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Dashboard</h2>
+                <div class="header-actions">
+                    {{if .IsAdmin}}<a href="/users" class="btn btn-secondary">Manage Users</a>{{end}}
+                </div>
             </div>
-        </div>
-    </nav>
-    <main class="container">
-        <h2>Dashboard</h2>
 
-        <div class="stats-grid">
-            {{range .Stats}}
-            <div class="stat-card">
-                <div class="stat-value">{{.Value}}</div>
-                <div class="stat-label">{{.Label}}</div>
+            {{if .Stats}}
+            <div class="stats-grid">
+                {{range .Stats}}
+                <div class="stat-card">
+                    <div class="stat-value">{{.Value}}</div>
+                    <div class="stat-label">{{.Label}}</div>
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+
+            {{if .Server}}
+            <div class="card">
+                <h3>PowerDNS Server</h3>
+                <div class="server-info">
+                    <div class="server-info-row">
+                        <span class="server-info-label">Status</span>
+                        <span class="badge badge-active">Connected</span>
+                    </div>
+                    <div class="server-info-row">
+                        <span class="server-info-label">ID</span>
+                        <span>{{.Server.ID}}</span>
+                    </div>
+                    <div class="server-info-row">
+                        <span class="server-info-label">Version</span>
+                        <span>{{.Server.Version}}</span>
+                    </div>
+                    <div class="server-info-row">
+                        <span class="server-info-label">Daemon</span>
+                        <span>{{.Server.Daemon}}</span>
+                    </div>
+                </div>
+            </div>
+            {{else}}
+            <div class="card">
+                <h3>PowerDNS Server</h3>
+                <div class="server-info">
+                    <div class="server-info-row">
+                        <span class="server-info-label">Status</span>
+                        <span class="badge badge-disabled">Unreachable</span>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+
+            {{if .Logs}}
+            <div class="card">
+                <h3>Recent Activity</h3>
+                <table class="table">
+                    <thead>
+                        <tr><th>Action</th><th>Details</th><th>Zone</th><th>User</th><th>Time</th></tr>
+                    </thead>
+                    <tbody>
+                        {{range .Logs}}
+                        <tr>
+                            <td><span class="badge badge-{{.action}}">{{.action}}</span></td>
+                            <td>{{.details}}</td>
+                            <td>{{if .zone_id}}<code>{{.zone_id}}</code>{{end}}</td>
+                            <td>{{.username}}</td>
+                            <td>{{.created_at}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
             </div>
             {{end}}
         </div>
-
-        <div class="card">
-            <h3>Quick Actions</h3>
-            <div class="actions-row">
-                <a href="/zones" class="btn btn-primary">Manage Zones</a>
-                {{if .IsAdmin}}<a href="/users" class="btn btn-secondary">Manage Users</a>{{end}}
-                {{if .IsAdmin}}<a href="/zones/new" class="btn btn-secondary">Create Zone</a>{{end}}
-            </div>
-        </div>
-
-        {{if .Logs}}
-        <div class="card">
-            <h3>Recent Activity</h3>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Details</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .Logs}}
-                    <tr>
-                        <td>{{.username}}</td>
-                        <td><span class="badge badge-{{.action}}">{{.action}}</span></td>
-                        <td>{{.details}}</td>
-                        <td>{{.created_at}}</td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
-        </div>
-        {{end}}
     </main>
-    <script src="/static/js/app.js"></script>
-</body>
-</html>
+</div>
+{{template "tail" .}}
+{{end}}

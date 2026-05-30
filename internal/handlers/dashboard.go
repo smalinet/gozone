@@ -63,6 +63,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		"Stats":   dashboardStats,
 		"Logs":    logs,
 		"Zones":   zoneCount,
+		"Server":  server,
 		"IsAdmin": user.IsAdmin(),
 	}
 	h.render(w, r, "dashboard.html", data)

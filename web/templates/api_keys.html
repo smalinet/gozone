@@ -1,132 +1,105 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="/dashboard">GoZone</a>
-            <span class="nav-subtitle">PowerDNS Admin</span>
-        </div>
-        <div class="nav-links">
-            <a href="/dashboard">Dashboard</a>
-            <a href="/zones">Zones</a>
-            <a href="/profile">Profile</a>
-            <a href="/profile/api-keys" class="active">API Keys</a>
-            {{if .IsAdmin}}<a href="/users">Users</a>{{end}}
-            {{if .IsAdmin}}<a href="/groups">Groups</a>{{end}}
-            <div class="nav-user">
-                <span>{{.User.Username}}</span>
-                <a href="/logout" class="btn-logout">Logout</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
-            </div>
-        </div>
-    </nav>
-    <main class="container">
-        <div class="page-header">
-            <h2>API Keys</h2>
-        </div>
+{{define "api_keys.html"}}
+{{template "head" .}}
+<div class="app-layout">
+    {{template "sidebar" .}}
+    <main class="main-content">
+        <div class="container">
+<div class="page-header">
+    <h2>API Keys</h2>
+</div>
 
-        {{if eq .Flash "created"}}
-        <div class="alert alert-success">
-            <strong>API key created successfully!</strong> Make sure to copy it now &mdash; it won't be shown again.
-            <div class="api-key-reveal" data-key="{{.NewKey}}">
-                <pre><code id="new-api-key">{{.NewKey}}</code></pre>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="copyAPIKey()">Copy</button>
-            </div>
-        </div>
-        {{end}}
-        {{if eq .Flash "deleted"}}
-        <div class="alert alert-success">API key deleted successfully.</div>
-        {{end}}
-        {{if eq .Error "not_found"}}
-        <div class="alert alert-error">API key not found.</div>
-        {{end}}
-        {{if eq .Error "forbidden"}}
-        <div class="alert alert-error">You can only delete your own API keys.</div>
-        {{end}}
+{{if eq .Flash "created"}}
+<div class="alert alert-success">
+    <strong>API key created!</strong> Copy it now — you won't be able to see it again.
+    {{if .NewKey}}
+    <div class="api-key-reveal" data-key="{{.NewKey}}">
+        <pre><code>{{.NewKey}}</code></pre>
+        <button class="btn btn-sm btn-secondary" onclick="copyAPIKey()">Copy</button>
+    </div>
+    {{end}}
+</div>
+{{end}}
 
-        <div class="card">
-            <h3>Create New API Key</h3>
-            <form method="POST" action="/profile/api-keys/create">
-                <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <input type="text" id="description" name="description" placeholder="e.g. My automation script" maxlength="255">
-                    <small>A short label to remember what this key is used for.</small>
-                </div>
-                <button type="submit" class="btn btn-primary">Generate API Key</button>
-            </form>
-        </div>
+{{if eq .Flash "deleted"}}
+<div class="alert alert-success">API key deleted.</div>
+{{end}}
 
-        {{if .APIKeys}}
-        <div class="card">
-            <h3>Your API Keys</h3>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th>Created</th>
-                        <th>Last Used</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .APIKeys}}
-                    <tr>
-                        <td>{{.Description}}</td>
-                        <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
-                        <td>
-                            {{if .LastUsedAt}}
-                            {{.LastUsedAt.Format "2006-01-02 15:04"}}
-                            {{else}}
-                            Never
-                            {{end}}
-                        </td>
-                        <td>
-                            <form method="POST" action="/profile/api-keys/delete" onsubmit="return confirm('Delete this API key? Any service using it will lose access.')">
-                                <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFToken}}">
-                                <input type="hidden" name="key_id" value="{{.ID}}">
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
+{{if eq .Error "not_found"}}
+<div class="alert alert-error">API key not found.</div>
+{{end}}
+
+{{if eq .Error "forbidden"}}
+<div class="alert alert-error">You can only delete your own API keys.</div>
+{{end}}
+
+<form method="POST" action="/profile/api-keys/create" class="card">
+    <input type="hidden" name="gorilla.csrf.Token" value="{{ .CSRFToken }}">
+    <div class="form-group">
+        <label for="description">New API Key Description</label>
+        <input type="text" id="description" name="description" placeholder="My API Key" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Generate Key</button>
+</form>
+
+{{if .APIKeys}}
+<div class="card">
+    <h3>Your API Keys</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Created</th>
+                <th>Last Used</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .APIKeys}}
+            <tr>
+                <td><strong>{{.Description}}</strong></td>
+                <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                <td>{{if .LastUsedAt}}{{.LastUsedAt.Format "2006-01-02 15:04"}}{{else}}Never{{end}}</td>
+                <td>
+                    <form method="POST" action="/profile/api-keys/delete" style="display:inline" onsubmit="return confirm('Delete key {{.Description}}?')">
+                        <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">
+                        <input type="hidden" name="key_id" value="{{.ID}}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+{{if ne .Flash "created"}}
+<div class="empty-state">
+    <h3>No API Keys</h3>
+    <p>You haven't created any API keys yet. Use the form above to generate one.</p>
+</div>
+{{end}}
+{{end}}
         </div>
-        {{else}}
-        {{if ne .Flash "created"}}
-        <div class="empty-state">
-            <h3>No API Keys</h3>
-            <p>You haven't created any API keys yet. Use the form above to generate one.</p>
-        </div>
-        {{end}}
-        {{end}}
     </main>
-    <script>
-    function copyAPIKey() {
-        var reveal = document.querySelector('.api-key-reveal');
-        if (!reveal) return;
-        var text = reveal.getAttribute('data-key');
-        if (!text) return;
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        var btn = reveal.querySelector('.btn');
-        if (btn) {
-            btn.textContent = 'Copied!';
-            setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
-        }
+</div>
+<script>
+function copyAPIKey() {
+    var reveal = document.querySelector('.api-key-reveal');
+    if (!reveal) return;
+    var text = reveal.getAttribute('data-key');
+    if (!text) return;
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    var btn = reveal.querySelector('.btn');
+    if (btn) {
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
     }
-    </script>
-    <script src="/static/js/app.js"></script>
-</body>
-</html>
+}
+</script>
+{{template "tail" .}}
+{{end}}

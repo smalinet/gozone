@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{{define "head"}}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,26 +7,35 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="/dashboard">GoZone</a>
-            <span class="nav-subtitle">PowerDNS Admin</span>
-        </div>
-        <div class="nav-links">
-            <a href="/dashboard">Dashboard</a>
-            <a href="/zones">Zones</a>
-            {{if .IsAdmin}}<a href="/users">Users</a>{{end}}
-            {{if .IsAdmin}}<a href="/groups">Groups</a>{{end}}
-            <div class="nav-user">
-                <span>{{.User.Username}}</span>
-                <a href="/logout" class="btn-logout">Logout</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
-            </div>
-        </div>
-    </nav>
-    <main class="container">
-{{define "content"}}{{end}}
-    </main>
+{{end}}
+
+{{define "tail"}}
     <script src="/static/js/app.js"></script>
 </body>
 </html>
+{{end}}
+
+{{define "sidebar"}}
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+        <div class="sidebar-brand">
+            <a href="/dashboard">GoZone</a>
+            <span class="nav-subtitle">PowerDNS Admin</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="/dashboard" title="Dashboard" class="{{if eq $.Section "dashboard"}}active{{end}}"><span class="nav-icon">◈</span><span class="nav-text">Dashboard</span></a>
+        <a href="/zones" title="Zones" class="{{if eq $.Section "zones"}}active{{end}}"><span class="nav-icon">⊙</span><span class="nav-text">Zones</span></a>
+        <a href="/profile" title="Profile" class="{{if eq $.Section "profile"}}active{{end}}"><span class="nav-icon">◉</span><span class="nav-text">Profile</span></a>
+        <a href="/profile/api-keys" title="API Keys" class="{{if eq $.Section "apikeys"}}active{{end}}"><span class="nav-icon">⚷</span><span class="nav-text">API Keys</span></a>
+        {{if .IsAdmin}}<a href="/users" title="Users" class="{{if eq $.Section "users"}}active{{end}}"><span class="nav-icon">⊞</span><span class="nav-text">Users</span></a>{{end}}
+        {{if .IsAdmin}}<a href="/groups" title="Groups" class="{{if eq $.Section "groups"}}active{{end}}"><span class="nav-icon">⊡</span><span class="nav-text">Groups</span></a>{{end}}
+    </nav>
+    <div class="sidebar-footer">
+        <span class="username">{{.User.Username}}</span>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+        <a href="/logout" class="btn-logout">Logout</a>
+    </div>
+</aside>
+{{end}}

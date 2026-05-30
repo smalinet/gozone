@@ -1,38 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="/dashboard">GoZone</a>
-            <span class="nav-subtitle">PowerDNS Admin</span>
-        </div>
-        <div class="nav-links">
-            <a href="/dashboard">Dashboard</a>
-            <a href="/zones">Zones</a>
-            <a href="/profile" class="active">Profile</a>
-            <a href="/profile/api-keys">API Keys</a>
-            <a href="/logout" class="btn-logout">Logout</a>
-            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
-        </div>
-    </nav>
-    <main class="container">
-        <h2>Profile</h2>
-        <div class="card">
-            <div class="profile-info">
-                <p><strong>Username:</strong> {{.User.Username}}</p>
-                <p><strong>Email:</strong> {{.User.Email}}</p>
-                <p><strong>Name:</strong> {{.User.FirstName}} {{.User.LastName}}</p>
-                <p><strong>Role:</strong> <span class="badge badge-{{.User.Role}}">{{.User.Role}}</span></p>
-                <p><strong>Member since:</strong> {{.User.CreatedAt}}</p>
-            </div>
+{{define "profile.html"}}
+{{template "head" .}}
+<div class="app-layout">
+    {{template "sidebar" .}}
+    <main class="main-content">
+        <div class="container">
+<div class="page-header">
+    <h2>Profile</h2>
+</div>
+<div class="card">
+    <div class="profile-info">
+        <p><strong>Username:</strong> {{.User.Username}}</p>
+        <p><strong>Email:</strong> {{.User.Email}}</p>
+        <p><strong>Name:</strong> {{.User.FirstName}} {{.User.LastName}}</p>
+        <p><strong>Role:</strong> <span class="badge badge-{{.User.Role}}">{{.User.Role}}</span></p>
+        <p><strong>Member since:</strong> {{.User.CreatedAt}}</p>
+    </div>
+</div>
         </div>
     </main>
-    <script src="/static/js/app.js"></script>
-</body>
-</html>
+</div>
+{{template "tail" .}}
+{{end}}
