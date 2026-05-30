@@ -25,6 +25,7 @@ import (
 	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/pdns"
+	"github.com/babykart/gozone/web/static"
 )
 
 //go:embed templates/*.html
@@ -159,7 +160,7 @@ func main() {
 	})
 
 	// Static files (no CSRF)
-	fileServer(r, "/static", http.Dir("web/static"))
+	fileServer(r, "/static", http.FS(static.FS))
 
 	// API routes (API key auth, no CSRF)
 	r.Route("/api/v1", func(r chi.Router) {
@@ -218,7 +219,7 @@ func main() {
 }
 
 // fileServer serves static files with proper caching headers.
-func fileServer(r chi.Router, path string, root http.Dir) {
+func fileServer(r chi.Router, path string, root http.FileSystem) {
 	fs := http.StripPrefix(path, http.FileServer(root))
 	r.Get(path+"/*", func(w http.ResponseWriter, r *http.Request) {
 		fs.ServeHTTP(w, r)

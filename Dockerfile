@@ -17,7 +17,6 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 COPY --from=builder /gozone /gozone
-COPY web/ web/
 COPY config.yaml .
 
 RUN mkdir -p /app/data
