@@ -76,7 +76,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Generate JWT token
 	duration := time.Duration(h.Cfg.Auth.SessionDurationHours) * time.Hour
-	token, err := middleware.GenerateToken(&user, []byte(h.Cfg.Server.SecretKey), duration)
+	token, err := middleware.GenerateToken(&user, h.Cfg.Server.JWTKey, duration)
 	if err != nil {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return

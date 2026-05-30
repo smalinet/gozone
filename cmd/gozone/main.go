@@ -76,7 +76,7 @@ func main() {
 
 	// CSRF protection for web UI forms
 	csrfMiddleware := csrf.Protect(
-		[]byte(cfg.Server.SecretKey),
+		cfg.Server.CSRFKey,
 		// Mark the CSRF cookie Secure when served over HTTPS. Configurable via
 		// server.secure_cookies / GOZONE_SECURE_COOKIES (see config.yaml).
 		csrf.Secure(cfg.Server.SecureCookies),
@@ -113,7 +113,7 @@ func main() {
 
 		// Authenticated routes (web UI)
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth(db, []byte(cfg.Server.SecretKey)))
+			r.Use(middleware.Auth(db, cfg.Server.JWTKey))
 
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)

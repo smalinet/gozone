@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/hex"
 	"os"
 	"path/filepath"
@@ -220,6 +221,66 @@ func TestLoadInvalidFile(t *testing.T) {
 	_, err := Load("/nonexistent/config.yaml")
 	if err != nil {
 		t.Fatalf("Load should not return error for nonexistent file: %v", err)
+	}
+}
+
+func TestDefaultConfig_HasDerivedKeys(t *testing.T) {
+	cfg := DefaultConfig()
+	if len(cfg.Server.JWTKey) != 32 {
+		t.Errorf("expected 32-byte JWTKey, got %d bytes", len(cfg.Server.JWTKey))
+	}
+	if len(cfg.Server.CSRFKey) != 32 {
+		t.Errorf("expected 32-byte CSRFKey, got %d bytes", len(cfg.Server.CSRFKey))
+	}
+	if bytes.Equal(cfg.Server.JWTKey, cfg.Server.CSRFKey) {
+		t.Error("JWTKey and CSRFKey must be different")
+	}
+	if bytes.Equal(cfg.Server.JWTKey, []byte(cfg.Server.SecretKey)) {
+		t.Error("JWTKey must differ from the master secret")
+	}
+}
+
+func TestLoad_HasDerivedKeys(t *testing.T) {
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if len(cfg.Server.JWTKey) != 32 {
+		t.Errorf("expected 32-byte JWTKey, got %d bytes", len(cfg.Server.JWTKey))
+	}
+	if len(cfg.Server.CSRFKey) != 32 {
+		t.Errorf("expected 32-byte CSRFKey, got %d bytes", len(cfg.Server.CSRFKey))
+	}
+	if bytes.Equal(cfg.Server.JWTKey, cfg.Server.CSRFKey) {
+		t.Error("JWTKey and CSRFKey must be different")
+	}
+}
+
+func TestDeriveKeys_Deterministic(t *testing.T) {
+	master := []byte("test-master-key-for-derivation-test")
+	jwt1, csrf1 := deriveKeys(master)
+	jwt2, csrf2 := deriveKeys(master)
+
+	if !bytes.Equal(jwt1, jwt2) {
+		t.Error("JWTKey must be deterministic")
+	}
+	if !bytes.Equal(csrf1, csrf2) {
+		t.Error("CSRFKey must be deterministic")
+	}
+	if bytes.Equal(jwt1, csrf1) {
+		t.Error("JWTKey and CSRFKey must be different")
+	}
+	if bytes.Equal(jwt1, master) {
+		t.Error("derived JWTKey must differ from master secret")
+	}
+}
+
+func TestDeriveKeys_DifferentMaster(t *testing.T) {
+	jwt1, _ := deriveKeys([]byte("master-one"))
+	jwt2, _ := deriveKeys([]byte("master-two"))
+
+	if bytes.Equal(jwt1, jwt2) {
+		t.Error("different master secrets must produce different JWT keys")
 	}
 }
 

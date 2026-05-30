@@ -4,7 +4,9 @@
 package config
 
 import (
+	"crypto/hkdf"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -35,6 +37,10 @@ type ServerConfig struct {
 	// or behind a TLS-terminating reverse proxy). Leave it false for plain-HTTP
 	// development, otherwise browsers will not return the CSRF cookie.
 	SecureCookies bool `yaml:"secure_cookies"`
+	// JWTKey is derived from SecretKey via HKDF-SHA256 for JWT signing.
+	JWTKey []byte `yaml:"-"`
+	// CSRFKey is derived from SecretKey via HKDF-SHA256 for CSRF tokens.
+	CSRFKey []byte `yaml:"-"`
 }
 
 // DatabaseConfig holds database connection settings.
@@ -66,7 +72,7 @@ type LoggingConfig struct {
 // The default admin credentials are admin/admin. Override via the YAML config
 // file or environment variables in production.
 func DefaultConfig() *Config {
-	return &Config{
+	cfg := &Config{
 		Server: ServerConfig{
 			Host:          "0.0.0.0",
 			Port:          8080,
@@ -90,6 +96,8 @@ func DefaultConfig() *Config {
 			Level: "info",
 		},
 	}
+	cfg.Server.JWTKey, cfg.Server.CSRFKey = deriveKeys([]byte(cfg.Server.SecretKey))
+	return cfg
 }
 
 // Load reads a YAML config file and returns a populated Config.
@@ -143,6 +151,9 @@ func Load(path string) (*Config, error) {
 			"Sessions and CSRF tokens are invalidated on every restart. " +
 			"Set server.secret_key or GOZONE_SECRET_KEY to a persistent value (openssl rand -hex 32)")
 	}
+
+	// Derive independent keys for JWT and CSRF from the master secret
+	cfg.Server.JWTKey, cfg.Server.CSRFKey = deriveKeys([]byte(cfg.Server.SecretKey))
 
 	// Ensure data directory exists for SQLite
 	if cfg.Database.Driver == "sqlite3" {
@@ -201,6 +212,22 @@ var placeholderSecrets = map[string]bool{
 // the well-known insecure placeholders.
 func isPlaceholderSecret(key string) bool {
 	return key == "" || placeholderSecrets[key]
+}
+
+// deriveKeys splits a master secret into two independent 32-byte sub-keys
+// using HKDF-SHA256, one for JWT signing and one for CSRF token protection.
+// Compromise of one sub-key does not reveal the other or the master secret.
+func deriveKeys(master []byte) (jwtKey, csrfKey []byte) {
+	var err error
+	jwtKey, err = hkdf.Key(sha256.New, master, nil, "gozone-jwt", 32)
+	if err != nil {
+		panic("hkdf: " + err.Error())
+	}
+	csrfKey, err = hkdf.Key(sha256.New, master, nil, "gozone-csrf", 32)
+	if err != nil {
+		panic("hkdf: " + err.Error())
+	}
+	return jwtKey, csrfKey
 }
 
 // generateSecretKey produces a cryptographically random 32-byte key
