@@ -39,6 +39,8 @@ func newTestHandler(t *testing.T) *Handler {
 		{{define "user_create.html"}}Create User{{end}}
 		{{define "user_edit.html"}}Edit User{{end}}
 		{{define "profile.html"}}Profile{{end}}
+		{{define "groups.html"}}Groups: {{range .Groups}}{{.Name}} {{end}}{{end}}
+		{{define "group_edit.html"}}GroupEdit: {{.Group.Name}} {{range .Members}}{{.Username}} {{end}}Zones: {{range .GroupZones}}{{.}} {{end}}{{end}}
 	`))
 
 	return &Handler{
@@ -67,6 +69,8 @@ func newTestHandlerWithPDNS(t *testing.T, handler testutil.PDNSHandlerFunc) (*Ha
 		{{define "user_create.html"}}Create User{{end}}
 		{{define "user_edit.html"}}Edit User{{end}}
 		{{define "profile.html"}}Profile{{end}}
+		{{define "groups.html"}}Groups: {{range .Groups}}{{.Name}} {{end}}{{end}}
+		{{define "group_edit.html"}}GroupEdit: {{.Group.Name}} {{range .Members}}{{.Username}} {{end}}Zones: {{range .GroupZones}}{{.}} {{end}}{{end}}
 	`))
 
 	return &Handler{
