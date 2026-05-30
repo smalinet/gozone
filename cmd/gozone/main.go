@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -172,7 +173,11 @@ func main() {
 	})
 
 	// Static files (no CSRF)
-	fileServer(r, "/static", http.FS(web.FS))
+	staticFS, err := fs.Sub(web.FS, "static")
+	if err != nil {
+		logger.Fatal("failed to open embedded static files", "error", err)
+	}
+	fileServer(r, "/static", http.FS(staticFS))
 
 	// API routes (API key auth, no CSRF)
 	r.Route("/api/v1", func(r chi.Router) {
