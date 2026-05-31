@@ -502,6 +502,52 @@ body.sidebar-collapsed .main-content {
     color: #7c3aed;
 }
 
+/* Record type colors (light mode) */
+.badge-type-A       { background: #dbeafe; color: #1d40e8; }
+.badge-type-AAAA    { background: #ede9fe; color: #7c3aed; }
+.badge-type-ALIAS   { background: #e0f2fe; color: #0369a1; }
+.badge-type-CAA     { background: #dcfce7; color: #15803d; }
+.badge-type-CNAME   { background: #ffedd5; color: #c2410c; }
+.badge-type-DNSKEY  { background: #f5f5f4; color: #57534e; }
+.badge-type-DS      { background: #f5f5f4; color: #78716c; }
+.badge-type-HINFO   { background: #fef9c3; color: #a16207; }
+.badge-type-KEY     { background: #f5f5f4; color: #44403c; }
+.badge-type-LOC     { background: #ecfccb; color: #4d7c0f; }
+.badge-type-MX      { background: #fce7f3; color: #be185d; }
+.badge-type-NAPTR   { background: #f5f5f4; color: #737373; }
+.badge-type-NS      { background: #cffafe; color: #0e7490; }
+.badge-type-NSEC    { background: #f5f5f4; color: #737373; }
+.badge-type-NSEC3   { background: #f5f5f4; color: #78716c; }
+.badge-type-PTR     { background: #fee2e2; color: #b91c1c; }
+.badge-type-RRSIG   { background: #f5f5f4; color: #a3a3a3; }
+.badge-type-SOA     { background: #fef3c7; color: #b45309; }
+.badge-type-SRV     { background: #e0e7ff; color: #4338ca; }
+.badge-type-SSHFP   { background: #f5f5f4; color: #57534e; }
+.badge-type-TXT     { background: #d1fae5; color: #047857; }
+
+/* Record type colors (dark mode) */
+[data-theme="dark"] .badge-type-A       { background: rgba(37,99,235,0.18); color: #93c5fd; }
+[data-theme="dark"] .badge-type-AAAA    { background: rgba(124,58,237,0.18); color: #a78bfa; }
+[data-theme="dark"] .badge-type-ALIAS   { background: rgba(3,105,161,0.18); color: #7dd3fc; }
+[data-theme="dark"] .badge-type-CAA     { background: rgba(22,163,74,0.18); color: #4ade80; }
+[data-theme="dark"] .badge-type-CNAME   { background: rgba(194,65,12,0.18); color: #fb923c; }
+[data-theme="dark"] .badge-type-DNSKEY  { background: rgba(87,83,78,0.2); color: #d6d3d1; }
+[data-theme="dark"] .badge-type-DS      { background: rgba(120,113,108,0.2); color: #d6d3d1; }
+[data-theme="dark"] .badge-type-HINFO   { background: rgba(161,98,7,0.18); color: #fde047; }
+[data-theme="dark"] .badge-type-KEY     { background: rgba(68,64,60,0.2); color: #d6d3d1; }
+[data-theme="dark"] .badge-type-LOC     { background: rgba(77,124,15,0.18); color: #a3e635; }
+[data-theme="dark"] .badge-type-MX      { background: rgba(190,24,93,0.18); color: #f472b6; }
+[data-theme="dark"] .badge-type-NAPTR   { background: rgba(115,115,115,0.2); color: #d4d4d4; }
+[data-theme="dark"] .badge-type-NS      { background: rgba(14,116,144,0.18); color: #22d3ee; }
+[data-theme="dark"] .badge-type-NSEC    { background: rgba(115,115,115,0.2); color: #d4d4d4; }
+[data-theme="dark"] .badge-type-NSEC3   { background: rgba(120,113,108,0.2); color: #d6d3d1; }
+[data-theme="dark"] .badge-type-PTR     { background: rgba(185,28,28,0.18); color: #f87171; }
+[data-theme="dark"] .badge-type-RRSIG   { background: rgba(163,163,163,0.15); color: #d4d4d4; }
+[data-theme="dark"] .badge-type-SOA     { background: rgba(180,83,9,0.18); color: #fbbf24; }
+[data-theme="dark"] .badge-type-SRV     { background: rgba(67,56,202,0.18); color: #818cf8; }
+[data-theme="dark"] .badge-type-SSHFP   { background: rgba(87,83,78,0.2); color: #d6d3d1; }
+[data-theme="dark"] .badge-type-TXT     { background: rgba(4,120,87,0.18); color: #34d399; }
+
 .badge-create_zone,
 .badge-create_record {
     background: #dcfce7;

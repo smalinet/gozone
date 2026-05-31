@@ -51,7 +51,7 @@
             {{range .Records}}
             <tr>
                 <td>{{$rrset.Name}}</td>
-                <td><span class="badge badge-type">{{$rrset.Type}}</span></td>
+                <td><span class="badge badge-type badge-type-{{$rrset.Type}}">{{$rrset.Type}}</span></td>
                 <td>{{.Content}}</td>
                 <td>{{$rrset.TTL}}</td>
                 <td>{{if .Priority}}{{.Priority}}{{else}}-{{end}}</td>
