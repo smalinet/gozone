@@ -270,3 +270,84 @@ func TestIndexUsage(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeDSN_MySQL(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			"user:password@tcp(localhost:3306)/gozone",
+			"user:***@tcp(localhost:3306)/gozone",
+		},
+		{
+			"root:secret@tcp(127.0.0.1:3306)/dbname?parseTime=true&multiStatements=true",
+			"root:***@tcp(127.0.0.1:3306)/dbname?parseTime=true&multiStatements=true",
+		},
+		{
+			"admin:p@ss:w0rd@tcp(host)/mydb",
+			"admin:***@tcp(host)/mydb",
+		},
+	}
+
+	for _, tt := range tests {
+		got := sanitizeDSN(tt.input)
+		if got != tt.expected {
+			t.Errorf("sanitizeDSN(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
+func TestSanitizeDSN_PostgreSQL(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			"host=localhost port=5432 user=gozone password=secret dbname=gozone sslmode=disable",
+			"host=localhost port=5432 user=gozone password=*** dbname=gozone sslmode=disable",
+		},
+		{
+			"host=db.example.com user=admin password=changeme dbname=prod",
+			"host=db.example.com user=admin password=*** dbname=prod",
+		},
+		{
+			"user=app password=very-secret-pwd! database=mydb",
+			"user=app password=*** database=mydb",
+		},
+	}
+
+	for _, tt := range tests {
+		got := sanitizeDSN(tt.input)
+		if got != tt.expected {
+			t.Errorf("sanitizeDSN(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
+func TestSanitizeDSN_SQLite(t *testing.T) {
+	tests := []string{
+		"./data/gozone.db",
+		":memory:",
+		"/var/lib/gozone/data.db",
+	}
+
+	for _, input := range tests {
+		got := sanitizeDSN(input)
+		if got != input {
+			t.Errorf("sanitizeDSN(%q) = %q, want unchanged", input, got)
+		}
+	}
+}
+
+func TestSanitizeDSN_NoCredentials(t *testing.T) {
+	got := sanitizeDSN("host@tcp(localhost)/db")
+	if got != "host@tcp(localhost)/db" {
+		t.Errorf("DSN without password should remain unchanged: got %q", got)
+	}
+
+	got = sanitizeDSN("user=admin host=localhost dbname=prod")
+	if got != "user=admin host=localhost dbname=prod" {
+		t.Errorf("Postgres DSN without password should remain unchanged: got %q", got)
+	}
+}

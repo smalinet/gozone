@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/babykart/gozone/internal/config"
 	"github.com/babykart/gozone/internal/logger"
@@ -67,7 +69,7 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
-	logger.Info("connected to database", "driver", cfg.Driver, "dsn", cfg.DSN)
+	logger.Info("connected to database", "driver", cfg.Driver, "dsn", sanitizeDSN(cfg.DSN))
 	return db, nil
 }
 
@@ -174,4 +176,26 @@ func (db *DB) migrate() error {
 	}
 	logger.Info("migrations completed")
 	return nil
+}
+
+// sanitizeDSN redacts passwords from database connection strings for safe
+// logging. It handles MySQL-style (user:password@tcp(...)), PostgreSQL
+// (password=secret), and SQLite (file path) DSN formats.
+func sanitizeDSN(dsn string) string {
+	// MySQL-style: user:password@tcp(host)/db
+	sep := "@tcp("
+	if idx := strings.Index(dsn, sep); idx >= 0 {
+		prefix := dsn[:idx]
+		if colon := strings.Index(prefix, ":"); colon >= 0 {
+			return prefix[:colon+1] + "***" + dsn[idx:]
+		}
+		return dsn
+	}
+	// PostgreSQL-style: password=secret
+	re := regexp.MustCompile(`password=[^ ]+`)
+	if re.MatchString(dsn) {
+		return re.ReplaceAllString(dsn, "password=***")
+	}
+	// SQLite: file path, no credentials
+	return dsn
 }
