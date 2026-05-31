@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -68,6 +69,29 @@ func TestCreateTSIGKeyPage(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Create TSIG Key: ") {
+		t.Error("expected rendered template prefix")
+	}
+
+	// Extract the generated key from the response
+	key := strings.TrimPrefix(body, "Create TSIG Key: ")
+	key = strings.TrimSpace(key)
+	if len(key) == 0 {
+		t.Fatal("generated key should not be empty")
+	}
+	if len(key) < 64 {
+		t.Errorf("expected base64 key of at least 64 chars, got %d chars: %q", len(key), key)
+	}
+	// Verify it's valid base64
+	decoded, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		t.Errorf("generated key is not valid base64: %v", err)
+	}
+	if len(decoded) != 64 {
+		t.Errorf("expected 64-byte key, got %d bytes", len(decoded))
 	}
 }
 
@@ -314,5 +338,45 @@ func TestDeleteTSIGKey_PDNSError(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), "Failed to delete TSIG key") {
 		t.Error("expected 'Failed to delete TSIG key' in error page")
+	}
+}
+
+func TestGenerateTSIGSecret(t *testing.T) {
+	key1, err := generateTSIGSecret()
+	if err != nil {
+		t.Fatalf("generateTSIGSecret failed: %v", err)
+	}
+	if len(key1) == 0 {
+		t.Fatal("secret should not be empty")
+	}
+
+	// Verify valid base64
+	decoded, err := base64.StdEncoding.DecodeString(key1)
+	if err != nil {
+		t.Fatalf("secret is not valid base64: %v", err)
+	}
+	if len(decoded) != 64 {
+		t.Errorf("expected 64 bytes, got %d", len(decoded))
+	}
+
+	// Verify randomness
+	key2, err := generateTSIGSecret()
+	if err != nil {
+		t.Fatalf("generateTSIGSecret failed: %v", err)
+	}
+	if key1 == key2 {
+		t.Error("two generated secrets should be different")
+	}
+}
+
+func TestGenerateTSIGSecret_DeterministicCheck(t *testing.T) {
+	key, err := generateTSIGSecret()
+	if err != nil {
+		t.Fatalf("generateTSIGSecret failed: %v", err)
+	}
+	// Verify it has the expected length for base64-encoded 64 bytes
+	// 64 bytes → base64 → 88 chars (including padding)
+	if len(key) != 88 {
+		t.Errorf("expected 88-char base64 key (64 bytes), got %d chars", len(key))
 	}
 }

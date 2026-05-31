@@ -655,6 +655,22 @@ details summary {
     gap: 1rem;
 }
 
+.input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.input-row textarea.form-control,
+.input-row .form-control {
+    flex: 1;
+}
+
+.input-row .btn {
+    min-width: 6rem;
+    height: auto;
+}
+
 .form-actions {
     display: flex;
     gap: 0.5rem;

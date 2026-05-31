@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -32,10 +34,18 @@ func (h *Handler) ListTSIGKeys(w http.ResponseWriter, r *http.Request) {
 // CreateTSIGKeyPage renders the TSIG key creation form (GET /tsigkeys/new).
 func (h *Handler) CreateTSIGKeyPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
+
+	secret, err := generateTSIGSecret()
+	if err != nil {
+		h.renderError(w, r, "Failed to generate TSIG secret: "+err.Error())
+		return
+	}
+
 	data := map[string]interface{}{
-		"Title":      "Create TSIG Key - GoZone",
-		"User":       user,
-		"Algorithms": tsigAlgorithms(),
+		"Title":        "Create TSIG Key - GoZone",
+		"User":         user,
+		"Algorithms":   tsigAlgorithms(),
+		"GeneratedKey": secret,
 	}
 	h.render(w, r, "tsigkey_create.html", data)
 }
@@ -188,4 +198,15 @@ func tsigAlgorithms() []string {
 		"hmac-sha256",
 		"hmac-sha512",
 	}
+}
+
+// generateTSIGSecret produces a cryptographically random 64-byte secret
+// encoded as a base64 string, suitable for use as a TSIG key material
+// (default for hmac-sha512).
+func generateTSIGSecret() (string, error) {
+	b := make([]byte, 64)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate tsig secret: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
 }

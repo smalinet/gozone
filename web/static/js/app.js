@@ -23,3 +23,18 @@ function toggleSidebar() {
     var collapsed = document.body.classList.contains('sidebar-collapsed');
     localStorage.setItem('gozone-sidebar', collapsed);
 }
+
+function generateTSIGSecret() {
+    var bytes = new Uint8Array(64);
+    crypto.getRandomValues(bytes);
+    var binary = '';
+    for (var i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    var base64 = btoa(binary);
+    document.getElementById('key').value = base64;
+    var algo = document.getElementById('algorithm');
+    if (algo) {
+        algo.value = 'hmac-sha512';
+    }
+}
