@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/babykart/gozone/internal/constants"
+	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/models"
 )
@@ -92,11 +94,29 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 		Secure:   isSecure(r),
 	})
+
+	if _, err := h.DB.Exec(
+		"INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'login', ?)",
+		user.ID, fmt.Sprintf("User %s logged in", user.Username),
+	); err != nil {
+		logger.Error("failed to log login activity", "user_id", user.ID, "error", err)
+	}
+
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
 // Logout clears the session cookie and redirects to /login.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	user := middleware.GetUser(r)
+	if user != nil {
+		if _, err := h.DB.Exec(
+			"INSERT INTO activity_logs (user_id, action, details) VALUES (?, 'logout', ?)",
+			user.ID, fmt.Sprintf("User %s logged out", user.Username),
+		); err != nil {
+			logger.Error("failed to log logout activity", "user_id", user.ID, "error", err)
+		}
+	}
+
 	// #nosec G124 -- Secure flag set dynamically via isSecure(r)
 	http.SetCookie(w, &http.Cookie{
 		Name:     constants.SessionCookieName,

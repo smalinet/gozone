@@ -67,6 +67,13 @@ func TestLogin_Success(t *testing.T) {
 	if !found {
 		t.Error("expected gozone_session cookie")
 	}
+
+	// Activity log should exist
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='login'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 login activity log, got %d", count)
+	}
 }
 
 func TestLogin_InvalidCredentials(t *testing.T) {
@@ -84,6 +91,12 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	h := newTestHandler(t)
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte("pass"), 4)
+	h.DB.Exec(
+		`INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)`,
+		"testuser", "test@example.com", string(hash), "user",
+	)
 
 	user := &models.User{ID: 1, Username: "testuser", Role: "user"}
 	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
@@ -103,6 +116,13 @@ func TestLogout(t *testing.T) {
 		if c.Name == constants.SessionCookieName && c.Value != "" {
 			t.Error("expected empty session cookie")
 		}
+	}
+
+	// Activity log should exist
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='logout'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 logout activity log, got %d", count)
 	}
 }
 
