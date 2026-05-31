@@ -66,10 +66,10 @@ func main() {
 
 	// Set up router
 	r := chi.NewRouter()
-	r.Use(chimw.Logger)
-	r.Use(chimw.Recoverer)
-	r.Use(chimw.RealIP)
 	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
+	r.Use(requestLogger)
+	r.Use(chimw.Recoverer)
 	r.Use(chimw.Compress(5))
 	r.Use(middleware.SecurityHeaders)
 	r.Use(middleware.ErrorHandler)
@@ -279,4 +279,22 @@ func parseTemplates() *template.Template {
 	}
 	logger.Info("templates loaded", "count", len(tmpl.Templates()))
 	return tmpl
+}
+
+// requestLogger logs each HTTP request using r.RequestURI instead of
+// r.URL.String() to avoid logging absolute http:// URLs when behind a
+// reverse proxy that forwards requests with the original target.
+func requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		wr := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(wr, r)
+		logger.Info("request",
+			"method", r.Method,
+			"path", r.RequestURI,
+			"status", wr.Status(),
+			"duration", time.Since(start).String(),
+			"remote", r.RemoteAddr,
+		)
+	})
 }
