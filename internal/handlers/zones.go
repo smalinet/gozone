@@ -67,6 +67,21 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 		zones = []models.ZoneWithInfo{}
 	}
 
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []models.ZoneWithInfo
+		for _, z := range zones {
+			if strings.Contains(strings.ToLower(z.Zone.Name), searchLower) {
+				filtered = append(filtered, z)
+			}
+		}
+		zones = filtered
+		if zones == nil {
+			zones = []models.ZoneWithInfo{}
+		}
+	}
+
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	perPage := 10
 	if pp := r.URL.Query().Get("perPage"); pp != "" {
@@ -81,6 +96,7 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 		"User":     user,
 		"Zones":    paginated,
 		"PageInfo": pageInfo,
+		"Search":   search,
 		"IsAdmin":  user.IsAdmin(),
 	}
 	h.render(w, r, "zones.html", data)
@@ -207,6 +223,26 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []models.RRSet
+		for _, rrset := range records {
+			if strings.Contains(strings.ToLower(rrset.Name), searchLower) ||
+				strings.Contains(strings.ToLower(rrset.Type), searchLower) {
+				filtered = append(filtered, rrset)
+				continue
+			}
+			for _, rec := range rrset.Records {
+				if strings.Contains(strings.ToLower(rec.Content), searchLower) {
+					filtered = append(filtered, rrset)
+					break
+				}
+			}
+		}
+		records = filtered
+	}
+
 	recordPage, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	recordPerPage := 10
 	if pp := r.URL.Query().Get("perPage"); pp != "" {
@@ -235,6 +271,7 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		"Zone":            zone,
 		"Records":         paginatedRecords,
 		"RecordPageInfo":  recordPageInfo,
+		"Search":          search,
 		"MetaData":        metadata,
 		"Logs":            logs,
 		"PDNSVersion":     pdnsVersion,

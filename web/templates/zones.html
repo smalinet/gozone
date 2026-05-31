@@ -6,9 +6,14 @@
         <div class="container">
 <div class="page-header">
     <h2>Zones</h2>
-    {{if .IsAdmin}}
-    <a href="/zones/new" class="btn btn-primary">Create Zone</a>
-    {{end}}
+    <div class="header-actions">
+        <form method="GET" action="/zones" class="search-form">
+            <input type="search" name="search" value="{{.Search}}" placeholder="Filter zones..." class="search-input">
+        </form>
+        {{if .IsAdmin}}
+        <a href="/zones/new" class="btn btn-primary">Create Zone</a>
+        {{end}}
+    </div>
 </div>
 
 {{if .Zones}}
@@ -40,10 +45,10 @@
 </table>
 {{if gt .PageInfo.TotalPages 1}}
 <div class="pagination">
-    <a href="?page={{sub .PageInfo.Current 1}}&perPage={{.PageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current 1}} disabled{{end}}">← Previous</a>
+    <a href="?page={{sub .PageInfo.Current 1}}&perPage={{.PageInfo.PerPage}}{{if .Search}}&search={{.Search | urlquery}}{{end}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current 1}} disabled{{end}}">← Previous</a>
     <span class="page-info">Page {{.PageInfo.Current}} / {{.PageInfo.TotalPages}} ({{.PageInfo.Total}} zones)</span>
-    <a href="?page={{add .PageInfo.Current 1}}&perPage={{.PageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current .PageInfo.TotalPages}} disabled{{end}}">Next →</a>
-    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+    <a href="?page={{add .PageInfo.Current 1}}&perPage={{.PageInfo.PerPage}}{{if .Search}}&search={{.Search | urlquery}}{{end}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current .PageInfo.TotalPages}} disabled{{end}}">Next →</a>
+    <select class="per-page-select" onchange="var s=document.querySelector('input[name=search]');var q='?perPage='+this.value;if(s&&s.value)q+='&search='+encodeURIComponent(s.value);window.location.href=q">
         <option value="10" {{if eq .PageInfo.PerPage 10}}selected{{end}}>10</option>
         <option value="20" {{if eq .PageInfo.PerPage 20}}selected{{end}}>20</option>
         <option value="30" {{if eq .PageInfo.PerPage 30}}selected{{end}}>30</option>
@@ -55,7 +60,7 @@
 {{else}}
 {{if .Zones}}
 <div class="pagination">
-    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+    <select class="per-page-select" onchange="var s=document.querySelector('input[name=search]');var q='?perPage='+this.value;if(s&&s.value)q+='&search='+encodeURIComponent(s.value);window.location.href=q">
         <option value="10" {{if eq .PageInfo.PerPage 10}}selected{{end}}>10</option>
         <option value="20" {{if eq .PageInfo.PerPage 20}}selected{{end}}>20</option>
         <option value="30" {{if eq .PageInfo.PerPage 30}}selected{{end}}>30</option>
@@ -69,7 +74,7 @@
 {{else}}
 <div class="empty-state">
     <h3>No zones found</h3>
-    <p>Create your first DNS zone to get started.</p>
+    <p>{{if .Search}}No zones match your search.{{else}}Create your first DNS zone to get started.{{end}}</p>
     {{if .IsAdmin}}<a href="/zones/new" class="btn btn-primary">Create Zone</a>{{end}}
 </div>
 {{end}}

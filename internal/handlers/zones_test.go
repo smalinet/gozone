@@ -688,3 +688,110 @@ func TestListZones_Pagination(t *testing.T) {
 		t.Errorf("default page: expected 200, got %d", w3.Code)
 	}
 }
+
+func TestListZones_Search(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/servers/localhost/zones" {
+			json.NewEncoder(w).Encode([]models.Zone{
+				{ID: "test1.com", Name: "test1.com", Kind: "Native"},
+				{ID: "example.net", Name: "example.net", Kind: "Native"},
+				{ID: "example.org", Name: "example.org", Kind: "Native"},
+			})
+		} else {
+			w.Write([]byte(`[]`))
+		}
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones?search=example", nil)
+	r = r.WithContext(ctx)
+	h.ListZones(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestListZones_Search_NoResults(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/servers/localhost/zones" {
+			json.NewEncoder(w).Encode([]models.Zone{
+				{ID: "test1.com", Name: "test1.com", Kind: "Native"},
+			})
+		} else {
+			w.Write([]byte(`[]`))
+		}
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones?search=nonexistent", nil)
+	r = r.WithContext(ctx)
+	h.ListZones(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestListZones_Search_CaseInsensitive(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/servers/localhost/zones" {
+			json.NewEncoder(w).Encode([]models.Zone{
+				{ID: "EXAMPLE.com", Name: "EXAMPLE.com", Kind: "Native"},
+			})
+		} else {
+			w.Write([]byte(`[]`))
+		}
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	// Search with lowercase should match uppercase zone name
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones?search=example", nil)
+	r = r.WithContext(ctx)
+	h.ListZones(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestViewZone_RecordsSearch(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(r.URL.Path, "/records") {
+			// This is a separate zone request, not used
+		}
+		json.NewEncoder(w).Encode(models.Zone{
+			ID: "example.com", Name: "example.com", Kind: "Native",
+		})
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com?search=www", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.ViewZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}

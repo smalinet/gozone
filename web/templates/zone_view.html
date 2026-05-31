@@ -9,6 +9,9 @@
         <a href="/zones" class="breadcrumb">Zones</a> / <h2>{{.Zone.Name}}</h2>
     </div>
     <div class="header-actions">
+        <form method="GET" class="search-form" style="display:inline">
+            <input type="search" name="search" value="{{.Search}}" placeholder="Filter records..." class="search-input">
+        </form>
         <a href="/zones/{{.Zone.ID}}/records/new" class="btn btn-primary">Add Record</a>
         {{if .IsAdmin}}
         <form method="POST" action="/zones/{{.Zone.ID}}/rectify" style="display:inline">
@@ -72,10 +75,10 @@
     </table>
 {{if gt .RecordPageInfo.TotalPages 1}}
 <div class="pagination">
-    <a href="?page={{sub .RecordPageInfo.Current 1}}&perPage={{.RecordPageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current 1}} disabled{{end}}">← Previous</a>
+    <a href="?page={{sub .RecordPageInfo.Current 1}}&perPage={{.RecordPageInfo.PerPage}}{{if $.Search}}&search={{$.Search | urlquery}}{{end}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current 1}} disabled{{end}}">← Previous</a>
     <span class="page-info">Page {{.RecordPageInfo.Current}} / {{.RecordPageInfo.TotalPages}} ({{.RecordPageInfo.Total}} records)</span>
-    <a href="?page={{add .RecordPageInfo.Current 1}}&perPage={{.RecordPageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current .RecordPageInfo.TotalPages}} disabled{{end}}">Next →</a>
-    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+    <a href="?page={{add .RecordPageInfo.Current 1}}&perPage={{.RecordPageInfo.PerPage}}{{if $.Search}}&search={{$.Search | urlquery}}{{end}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current .RecordPageInfo.TotalPages}} disabled{{end}}">Next →</a>
+    <select class="per-page-select" onchange="var s=document.querySelector('input[name=search]');var q='?perPage='+this.value;if(s&&s.value)q+='&search='+encodeURIComponent(s.value);window.location.href=q">
         <option value="10" {{if eq .RecordPageInfo.PerPage 10}}selected{{end}}>10</option>
         <option value="20" {{if eq .RecordPageInfo.PerPage 20}}selected{{end}}>20</option>
         <option value="30" {{if eq .RecordPageInfo.PerPage 30}}selected{{end}}>30</option>
@@ -87,7 +90,7 @@
 {{else}}
 {{if .Records}}
 <div class="pagination">
-    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+    <select class="per-page-select" onchange="var s=document.querySelector('input[name=search]');var q='?perPage='+this.value;if(s&&s.value)q+='&search='+encodeURIComponent(s.value);window.location.href=q">
         <option value="10" {{if eq .RecordPageInfo.PerPage 10}}selected{{end}}>10</option>
         <option value="20" {{if eq .RecordPageInfo.PerPage 20}}selected{{end}}>20</option>
         <option value="30" {{if eq .RecordPageInfo.PerPage 30}}selected{{end}}>30</option>
@@ -102,7 +105,7 @@
 {{else}}
 <div class="empty-state">
     <h3>No records</h3>
-    <p>Add DNS records to this zone.</p>
+    <p>{{if .Search}}No records match your search.{{else}}Add DNS records to this zone.{{end}}</p>
     <a href="/zones/{{.Zone.ID}}/records/new" class="btn btn-primary">Add Record</a>
 </div>
 {{end}}
