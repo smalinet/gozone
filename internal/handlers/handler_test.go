@@ -102,6 +102,27 @@ func TestGetRecordTypes(t *testing.T) {
 	}
 }
 
+func TestGetMetadataKinds(t *testing.T) {
+	kinds := GetMetadataKinds()
+	if len(kinds) == 0 {
+		t.Fatal("expected non-empty metadata kinds")
+	}
+
+	expected := []string{"ALLOW-AXFR-FROM", "ALSO-NOTIFY", "PRESIGNED", "SOA-EDIT"}
+	for _, want := range expected {
+		found := false
+		for _, got := range kinds {
+			if got == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected metadata kind %s not found", want)
+		}
+	}
+}
+
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
 	data := map[string]string{"key": "value"}

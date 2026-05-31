@@ -81,6 +81,65 @@
 
 {{if .IsAdmin}}
 <div class="card" style="margin-top:2rem">
+    <h3>Zone Metadata</h3>
+
+    {{if .MetaData}}
+    <table class="table">
+        <thead>
+            <tr><th>Kind</th><th>Values</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {{$zoneID := .Zone.ID}}
+            {{range .MetaData}}
+            <tr>
+                <td><code>{{.Kind}}</code></td>
+                <td>
+                    {{range .Metadata}}
+                    <code class="meta-value">{{.}}</code>
+                    {{end}}
+                </td>
+                <td class="actions-cell">
+                    <form method="POST" action="/zones/{{$zoneID}}/metadata/delete" style="display:inline" onsubmit="return confirm('Delete metadata {{.Kind}}?')">
+                        <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">
+                        <input type="hidden" name="kind" value="{{.Kind}}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p class="empty-meta">No metadata set for this zone.</p>
+    {{end}}
+
+    <details style="margin-top:1rem">
+        <summary style="cursor:pointer;font-weight:600">Add Metadata</summary>
+        <form method="POST" action="/zones/{{.Zone.ID}}/metadata/create" style="margin-top:0.75rem">
+            <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="kind">Kind</label>
+                    <select name="kind" id="kind" class="form-control">
+                        <option value="">Select kind...</option>
+                        {{range $.MetaKinds}}
+                        <option value="{{.}}">{{.}}</option>
+                        {{end}}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="values">Values (one per line)</label>
+                <textarea name="values" id="values" class="form-control" rows="4" placeholder="192.0.2.0/24&#10;2001:db8::/32"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Metadata</button>
+        </form>
+    </details>
+</div>
+{{end}}
+
+{{if .IsAdmin}}
+<div class="card" style="margin-top:2rem">
     <h3>Danger Zone</h3>
     <form method="POST" action="/zones/delete" onsubmit="return confirm('Delete zone {{.Zone.Name}}? This action cannot be undone.')">
         <input type="hidden" name="gorilla.csrf.Token" value="{{ .CSRFToken }}">

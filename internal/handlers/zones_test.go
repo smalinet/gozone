@@ -357,3 +357,224 @@ func TestNotifyZone_PDNSError(t *testing.T) {
 		t.Error("expected 'Notify failed' in error page")
 	}
 }
+
+func TestCreateMetadata_Success(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusCreated)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+		}
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "kind=ALSO-NOTIFY&values=10.0.0.1"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/create", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.CreateMetadata(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected redirect 303, got %d", w.Code)
+	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='create_metadata'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 activity log, got %d", count)
+	}
+}
+
+func TestCreateMetadata_MultiLineValues(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			var req models.Metadata
+			json.NewDecoder(r.Body).Decode(&req)
+			if len(req.Metadata) != 2 {
+				t.Errorf("expected 2 values, got %d", len(req.Metadata))
+			}
+			w.WriteHeader(http.StatusCreated)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+		}
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "kind=ALLOW-AXFR-FROM&values=192.0.2.0%2F24%0A2001%3Adb8%3A%3A%2F32"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/create", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.CreateMetadata(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected redirect 303, got %d", w.Code)
+	}
+}
+
+func TestCreateMetadata_EmptyKind(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/create", strings.NewReader("kind=&values=test"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.CreateMetadata(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Metadata kind is required") {
+		t.Error("expected 'Metadata kind is required' in error page")
+	}
+}
+
+func TestCreateMetadata_EmptyValues(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/create", strings.NewReader("kind=SOA-EDIT&values="))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.CreateMetadata(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "At least one value is required") {
+		t.Error("expected 'At least one value is required' in error page")
+	}
+}
+
+func TestCreateMetadata_NonAdmin(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 2, Username: "user", Role: "user"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/create", strings.NewReader("kind=NSEC3PARAM&values=test"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	middleware.RequireAdmin(http.HandlerFunc(h.CreateMetadata)).ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestDeleteMetadata_Success(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/delete", strings.NewReader("kind=PRESIGNED"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.DeleteMetadata(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected redirect 303, got %d", w.Code)
+	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='delete_metadata'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 activity log, got %d", count)
+	}
+}
+
+func TestDeleteMetadata_EmptyKind(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/delete", strings.NewReader("kind="))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.DeleteMetadata(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Metadata kind is required") {
+		t.Error("expected 'Metadata kind is required' in error page")
+	}
+}
+
+func TestDeleteMetadata_NonAdmin(t *testing.T) {
+	h := newTestHandler(t)
+
+	user := &models.User{ID: 2, Username: "user", Role: "user"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/delete", strings.NewReader("kind=PRESIGNED"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	middleware.RequireAdmin(http.HandlerFunc(h.DeleteMetadata)).ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w.Code)
+	}
+}
+
+func TestCreateMetadata_PDNSError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/metadata/create", strings.NewReader("kind=SOA-EDIT&values=INCREASE"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.CreateMetadata(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Failed to set metadata") {
+		t.Error("expected 'Failed to set metadata' in error page")
+	}
+}

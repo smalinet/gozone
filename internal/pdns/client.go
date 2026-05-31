@@ -328,6 +328,50 @@ func (c *Client) NotifySlaves(zoneID string) error {
 	return nil
 }
 
+// GetMetadata returns all zone metadata entries.
+func (c *Client) GetMetadata(zoneID string) ([]models.Metadata, error) {
+	body, status, err := c.do("GET", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata", nil)
+	if err != nil {
+		return nil, err
+	}
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
+	}
+
+	var metadata []models.Metadata
+	if err := json.Unmarshal(body, &metadata); err != nil {
+		return nil, fmt.Errorf("unmarshal metadata: %w", err)
+	}
+	return metadata, nil
+}
+
+// SetMetadata creates or replaces a zone metadata entry.
+func (c *Client) SetMetadata(zoneID string, meta models.Metadata) error {
+	if meta.Metadata == nil {
+		meta.Metadata = []string{}
+	}
+	_, status, err := c.do("POST", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata", meta)
+	if err != nil {
+		return err
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("unexpected status %d", status)
+	}
+	return nil
+}
+
+// DeleteMetadata removes a zone metadata entry by kind.
+func (c *Client) DeleteMetadata(zoneID string, kind string) error {
+	_, status, err := c.do("DELETE", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata/"+kind, nil)
+	if err != nil {
+		return err
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("unexpected status %d", status)
+	}
+	return nil
+}
+
 // ServerID returns the configured server ID.
 func (c *Client) ServerID() string {
 	return c.serverID

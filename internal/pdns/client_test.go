@@ -409,3 +409,115 @@ func TestServerID(t *testing.T) {
 		t.Errorf("expected localhost, got %s", client.ServerID())
 	}
 }
+
+func TestGetMetadata(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]models.Metadata{
+			{Kind: "ALLOW-AXFR-FROM", Metadata: []string{"192.0.2.0/24"}},
+			{Kind: "PRESIGNED", Metadata: []string{"1"}},
+		})
+	})
+
+	metadata, err := client.GetMetadata("example.com")
+	if err != nil {
+		t.Fatalf("GetMetadata failed: %v", err)
+	}
+	if len(metadata) != 2 {
+		t.Fatalf("expected 2 metadata entries, got %d", len(metadata))
+	}
+	if metadata[0].Kind != "ALLOW-AXFR-FROM" {
+		t.Errorf("expected ALLOW-AXFR-FROM, got %s", metadata[0].Kind)
+	}
+	if len(metadata[0].Metadata) != 1 || metadata[0].Metadata[0] != "192.0.2.0/24" {
+		t.Errorf("unexpected metadata values: %v", metadata[0].Metadata)
+	}
+}
+
+func TestGetMetadata_Empty(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[]`))
+	})
+
+	metadata, err := client.GetMetadata("example.com")
+	if err != nil {
+		t.Fatalf("GetMetadata failed: %v", err)
+	}
+	if len(metadata) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(metadata))
+	}
+}
+
+func TestSetMetadata(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		var req models.Metadata
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("bad request: %v", err)
+		}
+		if req.Kind != "ALSO-NOTIFY" {
+			t.Errorf("expected ALSO-NOTIFY, got %s", req.Kind)
+		}
+		if len(req.Metadata) != 1 || req.Metadata[0] != "10.0.0.1" {
+			t.Errorf("unexpected values: %v", req.Metadata)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	err := client.SetMetadata("example.com", models.Metadata{
+		Kind:     "ALSO-NOTIFY",
+		Metadata: []string{"10.0.0.1"},
+	})
+	if err != nil {
+		t.Fatalf("SetMetadata failed: %v", err)
+	}
+}
+
+func TestSetMetadata_NilValues(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		var req models.Metadata
+		json.NewDecoder(r.Body).Decode(&req)
+		if req.Metadata == nil {
+			t.Error("metadata should not be nil")
+		}
+		if len(req.Metadata) != 0 {
+			t.Errorf("expected empty slice, got %v", req.Metadata)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	err := client.SetMetadata("example.com", models.Metadata{Kind: "PRESIGNED"})
+	if err != nil {
+		t.Fatalf("SetMetadata failed: %v", err)
+	}
+}
+
+func TestDeleteMetadata(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Errorf("expected DELETE, got %s", r.Method)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	if err := client.DeleteMetadata("example.com", "PRESIGNED"); err != nil {
+		t.Fatalf("DeleteMetadata failed: %v", err)
+	}
+}
+
+func TestDeleteMetadata_Error(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	err := client.DeleteMetadata("example.com", "NONEXISTENT")
+	if err == nil {
+		t.Error("expected error for 404 response")
+	}
+}

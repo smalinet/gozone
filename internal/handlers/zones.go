@@ -140,7 +140,7 @@ func (h *Handler) DeleteZone(w http.ResponseWriter, r *http.Request) {
 }
 
 // ViewZone renders a zone detail page with its records, activity logs, and
-// PowerDNS version (GET /zones/{zone_id}).
+// metadata (GET /zones/{zone_id}).
 func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -157,6 +157,9 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get zone metadata
+	metadata, _ := h.PDNS.GetMetadata(zoneID)
+
 	// Get activity logs for this zone
 	logs := h.getZoneActivityLogs(zoneID)
 
@@ -172,9 +175,11 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		"User":        user,
 		"Zone":        zone,
 		"Records":     records,
+		"MetaData":    metadata,
 		"Logs":        logs,
 		"PDNSVersion": pdnsVersion,
 		"RecordTypes": GetRecordTypes(),
+		"MetaKinds":   GetMetadataKinds(),
 		"IsAdmin":     user.IsAdmin(),
 	}
 	h.render(w, r, "zone_view.html", data)
@@ -211,6 +216,94 @@ func (h *Handler) NotifyZone(w http.ResponseWriter, r *http.Request) {
 	if err := h.PDNS.NotifySlaves(zoneID); err != nil {
 		h.renderError(w, r, "Notify failed: "+err.Error())
 		return
+	}
+
+	// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
+	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
+}
+
+// CreateMetadata creates a zone metadata entry (POST /zones/{zone_id}/metadata/create).
+//
+// Requires admin role. The kind and values are submitted via form values.
+// Redirects back to the zone view on success.
+func (h *Handler) CreateMetadata(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/zones", http.StatusSeeOther)
+		return
+	}
+
+	zoneID := r.PathValue("zone_id")
+	kind := strings.TrimSpace(r.FormValue("kind"))
+	valuesRaw := strings.TrimSpace(r.FormValue("values"))
+
+	if kind == "" {
+		h.renderError(w, r, "Metadata kind is required")
+		return
+	}
+	if valuesRaw == "" {
+		h.renderError(w, r, "At least one value is required")
+		return
+	}
+
+	var values []string
+	for _, v := range strings.Split(valuesRaw, "\n") {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			values = append(values, v)
+		}
+	}
+
+	meta := models.Metadata{
+		Kind:     kind,
+		Metadata: values,
+	}
+
+	if err := h.PDNS.SetMetadata(zoneID, meta); err != nil {
+		h.renderError(w, r, "Failed to set metadata: "+err.Error())
+		return
+	}
+
+	user := middleware.GetUser(r)
+	if _, err := h.DB.Exec(
+		"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'create_metadata', ?)",
+		user.ID, zoneID, fmt.Sprintf("Set metadata %s on zone %s", kind, zoneID),
+	); err != nil {
+		logger.Error("failed to log create_metadata activity", "zone_id", zoneID, "kind", kind, "error", err)
+	}
+
+	// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
+	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
+}
+
+// DeleteMetadata removes a zone metadata entry (POST /zones/{zone_id}/metadata/delete).
+//
+// Requires admin role. The kind is submitted via form value.
+// Redirects back to the zone view on success.
+func (h *Handler) DeleteMetadata(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/zones", http.StatusSeeOther)
+		return
+	}
+
+	zoneID := r.PathValue("zone_id")
+	kind := strings.TrimSpace(r.FormValue("kind"))
+
+	if kind == "" {
+		h.renderError(w, r, "Metadata kind is required")
+		return
+	}
+
+	if err := h.PDNS.DeleteMetadata(zoneID, kind); err != nil {
+		h.renderError(w, r, "Failed to delete metadata: "+err.Error())
+		return
+	}
+
+	user := middleware.GetUser(r)
+	if _, err := h.DB.Exec(
+		"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'delete_metadata', ?)",
+		user.ID, zoneID, fmt.Sprintf("Deleted metadata %s from zone %s", kind, zoneID),
+	); err != nil {
+		logger.Error("failed to log delete_metadata activity", "zone_id", zoneID, "kind", kind, "error", err)
 	}
 
 	// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
@@ -263,5 +356,25 @@ func GetRecordTypes() []string {
 		"NS", "NSEC", "NSEC3", "NSEC3PARAM", "OPENPGPKEY", "PTR",
 		"RP", "RRSIG", "SOA", "SPF", "SRV", "SSHFP", "TLSA",
 		"TXT", "URI",
+	}
+}
+
+// GetMetadataKinds returns the list of common PowerDNS zone metadata kinds.
+func GetMetadataKinds() []string {
+	return []string{
+		"ALLOW-AXFR-FROM",
+		"ALSO-NOTIFY",
+		"AXFR-SOURCE",
+		"FORWARD-DNSSEC",
+		"GSS-ALLOW-AXFR-PRINCIPALS",
+		"LUA-AXFR-SCRIPT",
+		"NSEC3NARROW",
+		"NSEC3PARAM",
+		"PRESIGNED",
+		"PUBLISH-CDNSKEY",
+		"PUBLISH-CDS",
+		"SOA-EDIT",
+		"SOA-EDIT-API",
+		"TSIG-ALLOW-AXFR",
 	}
 }

@@ -148,8 +148,15 @@ func main() {
 				r.Get("/zones/new", h.CreateZonePage)
 				r.Post("/zones/create", h.CreateZone)
 				r.Post("/zones/delete", h.DeleteZone)
-				r.Post("/zones/{zone_id}/rectify", h.RectifyZone)
-				r.Post("/zones/{zone_id}/notify", h.NotifyZone)
+
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.CheckZoneAccess(db))
+
+					r.Post("/zones/{zone_id}/rectify", h.RectifyZone)
+					r.Post("/zones/{zone_id}/notify", h.NotifyZone)
+					r.Post("/zones/{zone_id}/metadata/create", h.CreateMetadata)
+					r.Post("/zones/{zone_id}/metadata/delete", h.DeleteMetadata)
+				})
 
 				r.Get("/users", h.ListUsers)
 				r.Get("/users/new", h.CreateUserPage)

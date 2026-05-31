@@ -417,3 +417,58 @@ func TestZoneStatistics_JSON(t *testing.T) {
 		t.Errorf("got %s %d, want example.com 42", decoded.Name, decoded.Records)
 	}
 }
+
+func TestMetadata_JSON(t *testing.T) {
+	original := Metadata{
+		Kind:     "ALLOW-AXFR-FROM",
+		Metadata: []string{"192.0.2.0/24", "2001:db8::/32"},
+		TTL:      3600,
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded Metadata
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if decoded.Kind != "ALLOW-AXFR-FROM" {
+		t.Errorf("Kind: got %s, want ALLOW-AXFR-FROM", decoded.Kind)
+	}
+	if len(decoded.Metadata) != 2 {
+		t.Fatalf("expected 2 metadata values, got %d", len(decoded.Metadata))
+	}
+	if decoded.Metadata[0] != "192.0.2.0/24" {
+		t.Errorf("Metadata[0]: got %s, want 192.0.2.0/24", decoded.Metadata[0])
+	}
+	if decoded.TTL != 3600 {
+		t.Errorf("TTL: got %d, want 3600", decoded.TTL)
+	}
+}
+
+func TestMetadata_JSON_EmptyMetadata(t *testing.T) {
+	original := Metadata{
+		Kind:     "PRESIGNED",
+		Metadata: []string{},
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded Metadata
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if decoded.Kind != "PRESIGNED" {
+		t.Errorf("Kind: got %s, want PRESIGNED", decoded.Kind)
+	}
+	if len(decoded.Metadata) != 0 {
+		t.Errorf("expected 0 metadata values, got %d", len(decoded.Metadata))
+	}
+}

@@ -96,3 +96,11 @@ type ZoneWithInfo struct {
 	Zone        Zone `json:"zone"`
 	RecordCount int  `json:"record_count"`
 }
+
+// Metadata represents a zone metadata entry in the PowerDNS API.
+// Each entry has a kind (e.g. "ALLOW-AXFR-FROM") and an array of values.
+type Metadata struct {
+	Kind     string   `json:"kind"`
+	Metadata []string `json:"metadata"`
+	TTL      int64    `json:"ttl,omitempty"`
+}

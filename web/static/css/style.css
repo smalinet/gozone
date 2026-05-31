@@ -465,6 +465,29 @@ body.sidebar-collapsed .main-content {
     white-space: nowrap;
 }
 
+/* Metadata */
+.meta-value {
+    display: inline-block;
+    margin: 0.1rem 0.25rem 0.1rem 0;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.8rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.empty-meta {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin: 0.75rem 0;
+}
+
+details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+}
+
 /* Badges */
 .badge {
     display: inline-block;

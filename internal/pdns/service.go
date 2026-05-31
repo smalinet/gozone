@@ -29,6 +29,11 @@ type ZoneService interface {
 	// DNSSEC & replication
 	RectifyZone(zoneID string) error
 	NotifySlaves(zoneID string) error
+
+	// Metadata
+	GetMetadata(zoneID string) ([]models.Metadata, error)
+	SetMetadata(zoneID string, meta models.Metadata) error
+	DeleteMetadata(zoneID string, kind string) error
 }
 
 // Compile-time check that Client implements ZoneService.
