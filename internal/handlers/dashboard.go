@@ -15,6 +15,9 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch statistics
 	stats, err := h.PDNS.GetStatistics()
+	if err != nil {
+		logger.Error("failed to fetch PDNS statistics", "error", err)
+	}
 
 	// Get server info
 	server, _ := h.PDNS.GetServer()

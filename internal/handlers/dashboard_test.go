@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/babykart/gozone/internal/middleware"
@@ -51,6 +52,35 @@ func TestDashboard_ServerStats(t *testing.T) {
 	h.Dashboard(w, r)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
+		t.Errorf("expected 200 with server stats, got %d", w.Code)
+	}
+}
+
+func TestDashboard_GetStatisticsError(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/statistics") {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"internal server error"}`))
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/zones") {
+			w.Write([]byte(`[]`))
+			return
+		}
+		w.Write([]byte(`{"id":"localhost","type":"Server","url":"/api/v1/servers/localhost","daemon_type":"authoritative","version":"4.9.0","config_url":"/api/v1/servers/localhost/config","zones_url":"/api/v1/servers/localhost/zones"}`))
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	r = r.WithContext(ctx)
+	h.Dashboard(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 even when PDNS statistics fail, got %d", w.Code)
 	}
 }
