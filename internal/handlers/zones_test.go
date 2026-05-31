@@ -627,8 +627,8 @@ func TestPaginate(t *testing.T) {
 
 	// perPage = 0 → all items
 	paged, info = paginate(items, 1, 0)
-	if len(paged) != 0 || info.TotalPages != 0 {
-		t.Errorf("perPage=0: len=%d pages=%d", len(paged), info.TotalPages)
+	if len(paged) != 15 || info.TotalPages != 1 || info.Current != 1 {
+		t.Errorf("perPage=0: len=%d pages=%d current=%d", len(paged), info.TotalPages, info.Current)
 	}
 
 	// single item

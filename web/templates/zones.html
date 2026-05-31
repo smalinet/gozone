@@ -40,10 +40,31 @@
 </table>
 {{if gt .PageInfo.TotalPages 1}}
 <div class="pagination">
-    <a href="?page={{sub .PageInfo.Current 1}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current 1}} disabled{{end}}">← Previous</a>
+    <a href="?page={{sub .PageInfo.Current 1}}&perPage={{.PageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current 1}} disabled{{end}}">← Previous</a>
     <span class="page-info">Page {{.PageInfo.Current}} / {{.PageInfo.TotalPages}} ({{.PageInfo.Total}} zones)</span>
-    <a href="?page={{add .PageInfo.Current 1}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current .PageInfo.TotalPages}} disabled{{end}}">Next →</a>
+    <a href="?page={{add .PageInfo.Current 1}}&perPage={{.PageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .PageInfo.Current .PageInfo.TotalPages}} disabled{{end}}">Next →</a>
+    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+        <option value="10" {{if eq .PageInfo.PerPage 10}}selected{{end}}>10</option>
+        <option value="20" {{if eq .PageInfo.PerPage 20}}selected{{end}}>20</option>
+        <option value="30" {{if eq .PageInfo.PerPage 30}}selected{{end}}>30</option>
+        <option value="40" {{if eq .PageInfo.PerPage 40}}selected{{end}}>40</option>
+        <option value="50" {{if eq .PageInfo.PerPage 50}}selected{{end}}>50</option>
+        <option value="0" {{if eq .PageInfo.PerPage 0}}selected{{end}}>All</option>
+    </select>
 </div>
+{{else}}
+{{if .Zones}}
+<div class="pagination">
+    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+        <option value="10" {{if eq .PageInfo.PerPage 10}}selected{{end}}>10</option>
+        <option value="20" {{if eq .PageInfo.PerPage 20}}selected{{end}}>20</option>
+        <option value="30" {{if eq .PageInfo.PerPage 30}}selected{{end}}>30</option>
+        <option value="40" {{if eq .PageInfo.PerPage 40}}selected{{end}}>40</option>
+        <option value="50" {{if eq .PageInfo.PerPage 50}}selected{{end}}>50</option>
+        <option value="0" {{if eq .PageInfo.PerPage 0}}selected{{end}}>All</option>
+    </select>
+</div>
+{{end}}
 {{end}}
 {{else}}
 <div class="empty-state">

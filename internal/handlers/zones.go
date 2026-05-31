@@ -22,11 +22,15 @@ type PageInfo struct {
 }
 
 // paginate slices a slice into a page and returns the pagination info.
+// When perPage is 0 or negative, all items are returned as a single page.
 func paginate[T any](items []T, page, perPage int) ([]T, PageInfo) {
 	total := len(items)
 	totalPages := 0
 	if perPage > 0 {
 		totalPages = (total + perPage - 1) / perPage
+	} else {
+		perPage = 0
+		totalPages = 1
 	}
 	if page < 1 {
 		page = 1
@@ -34,8 +38,11 @@ func paginate[T any](items []T, page, perPage int) ([]T, PageInfo) {
 	if page > totalPages && totalPages > 0 {
 		page = totalPages
 	}
+	if perPage <= 0 {
+		return items, PageInfo{Current: 1, PerPage: 0, TotalPages: 1, Total: total}
+	}
 	start := (page - 1) * perPage
-	if start >= total || perPage <= 0 {
+	if start >= total {
 		return nil, PageInfo{Current: page, PerPage: perPage, TotalPages: totalPages, Total: total}
 	}
 	end := start + perPage
@@ -61,7 +68,13 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	paginated, pageInfo := paginate(zones, page, 10)
+	perPage := 10
+	if pp := r.URL.Query().Get("perPage"); pp != "" {
+		if n, err := strconv.Atoi(pp); err == nil && n >= 0 {
+			perPage = n
+		}
+	}
+	paginated, pageInfo := paginate(zones, page, perPage)
 
 	data := map[string]interface{}{
 		"Title":    "Zones - GoZone",
@@ -195,7 +208,13 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	recordPage, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	paginatedRecords, recordPageInfo := paginate(records, recordPage, 10)
+	recordPerPage := 10
+	if pp := r.URL.Query().Get("perPage"); pp != "" {
+		if n, err := strconv.Atoi(pp); err == nil && n >= 0 {
+			recordPerPage = n
+		}
+	}
+	paginatedRecords, recordPageInfo := paginate(records, recordPage, recordPerPage)
 
 	// Get zone metadata
 	metadata, _ := h.PDNS.GetMetadata(zoneID)

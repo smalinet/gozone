@@ -846,6 +846,16 @@ details summary {
     pointer-events: none;
 }
 
+.per-page-select {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     body:not(.sidebar-collapsed) .sidebar {

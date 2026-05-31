@@ -72,10 +72,31 @@
     </table>
 {{if gt .RecordPageInfo.TotalPages 1}}
 <div class="pagination">
-    <a href="?page={{sub .RecordPageInfo.Current 1}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current 1}} disabled{{end}}">← Previous</a>
+    <a href="?page={{sub .RecordPageInfo.Current 1}}&perPage={{.RecordPageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current 1}} disabled{{end}}">← Previous</a>
     <span class="page-info">Page {{.RecordPageInfo.Current}} / {{.RecordPageInfo.TotalPages}} ({{.RecordPageInfo.Total}} records)</span>
-    <a href="?page={{add .RecordPageInfo.Current 1}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current .RecordPageInfo.TotalPages}} disabled{{end}}">Next →</a>
+    <a href="?page={{add .RecordPageInfo.Current 1}}&perPage={{.RecordPageInfo.PerPage}}" class="btn btn-sm btn-secondary{{if eq .RecordPageInfo.Current .RecordPageInfo.TotalPages}} disabled{{end}}">Next →</a>
+    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+        <option value="10" {{if eq .RecordPageInfo.PerPage 10}}selected{{end}}>10</option>
+        <option value="20" {{if eq .RecordPageInfo.PerPage 20}}selected{{end}}>20</option>
+        <option value="30" {{if eq .RecordPageInfo.PerPage 30}}selected{{end}}>30</option>
+        <option value="40" {{if eq .RecordPageInfo.PerPage 40}}selected{{end}}>40</option>
+        <option value="50" {{if eq .RecordPageInfo.PerPage 50}}selected{{end}}>50</option>
+        <option value="0" {{if eq .RecordPageInfo.PerPage 0}}selected{{end}}>All</option>
+    </select>
 </div>
+{{else}}
+{{if .Records}}
+<div class="pagination">
+    <select class="per-page-select" onchange="window.location.href='?perPage='+this.value">
+        <option value="10" {{if eq .RecordPageInfo.PerPage 10}}selected{{end}}>10</option>
+        <option value="20" {{if eq .RecordPageInfo.PerPage 20}}selected{{end}}>20</option>
+        <option value="30" {{if eq .RecordPageInfo.PerPage 30}}selected{{end}}>30</option>
+        <option value="40" {{if eq .RecordPageInfo.PerPage 40}}selected{{end}}>40</option>
+        <option value="50" {{if eq .RecordPageInfo.PerPage 50}}selected{{end}}>50</option>
+        <option value="0" {{if eq .RecordPageInfo.PerPage 0}}selected{{end}}>All</option>
+    </select>
+</div>
+{{end}}
 {{end}}
 </div>
 {{else}}
