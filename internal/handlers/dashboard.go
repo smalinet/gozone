@@ -50,7 +50,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		dashboardStats = append(dashboardStats, StatItem{Label: "Daemon Type", Value: server.Daemon})
 	}
 
-	if stats != nil && err == nil {
+	if err == nil {
 		for _, s := range stats {
 			switch s.Name {
 			case "udp-queries", "udp-answers", "tcp-queries", "tcp-answers":
@@ -59,14 +59,20 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	serverStats := make(map[string]string)
+	for _, s := range stats {
+		serverStats[s.Name] = s.Value
+	}
+
 	data := map[string]interface{}{
-		"Title":   "Dashboard - GoZone",
-		"User":    user,
-		"Stats":   dashboardStats,
-		"Logs":    logs,
-		"Zones":   zoneCount,
-		"Server":  server,
-		"IsAdmin": user.IsAdmin(),
+		"Title":       "Dashboard - GoZone",
+		"User":        user,
+		"Stats":       dashboardStats,
+		"Logs":        logs,
+		"Zones":       zoneCount,
+		"Server":      server,
+		"ServerStats": serverStats,
+		"IsAdmin":     user.IsAdmin(),
 	}
 	h.render(w, r, "dashboard.html", data)
 }

@@ -39,6 +39,16 @@
                         <span class="server-info-label">Daemon</span>
                         <span>{{.Server.Daemon}}</span>
                     </div>
+                    {{if .ServerStats}}
+                    <hr style="margin:0.5rem 0;border-color:var(--border)">
+                    {{if .ServerStats.uptime}}<div class="server-info-row"><span class="server-info-label">Uptime</span><span>{{.ServerStats.uptime}}s</span></div>{{end}}
+                    {{if .ServerStats.questions}}<div class="server-info-row"><span class="server-info-label">Questions</span><span>{{.ServerStats.questions}}</span></div>{{end}}
+                    {{if index .ServerStats "packetcache-hit"}}<div class="server-info-row"><span class="server-info-label">Packet Cache Hit</span><span>{{index .ServerStats "packetcache-hit"}}</span></div>{{end}}
+                    {{if index .ServerStats "packetcache-miss"}}<div class="server-info-row"><span class="server-info-label">Packet Cache Miss</span><span>{{index .ServerStats "packetcache-miss"}}</span></div>{{end}}
+                    {{if index .ServerStats "query-cache-hit"}}<div class="server-info-row"><span class="server-info-label">Query Cache Hit</span><span>{{index .ServerStats "query-cache-hit"}}</span></div>{{end}}
+                    {{if index .ServerStats "query-cache-miss"}}<div class="server-info-row"><span class="server-info-label">Query Cache Miss</span><span>{{index .ServerStats "query-cache-miss"}}</span></div>{{end}}
+                    {{if index .ServerStats "qsize-q"}}<div class="server-info-row"><span class="server-info-label">Queue Size</span><span>{{index .ServerStats "qsize-q"}}</span></div>{{end}}
+                    {{end}}
                 </div>
             </div>
             {{else}}
