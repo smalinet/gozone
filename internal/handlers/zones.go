@@ -253,6 +253,11 @@ func (h *Handler) CreateMetadata(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if len(values) == 0 {
+		h.renderError(w, r, "At least one non-empty value is required")
+		return
+	}
+
 	meta := models.Metadata{
 		Kind:     kind,
 		Metadata: values,

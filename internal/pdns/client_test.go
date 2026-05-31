@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/babykart/gozone/internal/config"
@@ -454,20 +455,21 @@ func TestGetMetadata_Empty(t *testing.T) {
 
 func TestSetMetadata(t *testing.T) {
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("expected POST, got %s", r.Method)
+		if r.Method != http.MethodPut {
+			t.Errorf("expected PUT, got %s", r.Method)
 		}
-		var req models.Metadata
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if !strings.HasSuffix(r.URL.Path, "/ALSO-NOTIFY") {
+			t.Errorf("expected path ending in /ALSO-NOTIFY, got %s", r.URL.Path)
+		}
+		var payload map[string][]string
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			t.Errorf("bad request: %v", err)
 		}
-		if req.Kind != "ALSO-NOTIFY" {
-			t.Errorf("expected ALSO-NOTIFY, got %s", req.Kind)
+		meta, ok := payload["metadata"]
+		if !ok || len(meta) != 1 || meta[0] != "10.0.0.1" {
+			t.Errorf("unexpected values: %v", meta)
 		}
-		if len(req.Metadata) != 1 || req.Metadata[0] != "10.0.0.1" {
-			t.Errorf("unexpected values: %v", req.Metadata)
-		}
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	err := client.SetMetadata("example.com", models.Metadata{
@@ -481,15 +483,19 @@ func TestSetMetadata(t *testing.T) {
 
 func TestSetMetadata_NilValues(t *testing.T) {
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		var req models.Metadata
-		json.NewDecoder(r.Body).Decode(&req)
-		if req.Metadata == nil {
-			t.Error("metadata should not be nil")
+		if r.Method != http.MethodPut {
+			t.Errorf("expected PUT, got %s", r.Method)
 		}
-		if len(req.Metadata) != 0 {
-			t.Errorf("expected empty slice, got %v", req.Metadata)
+		var payload map[string][]string
+		json.NewDecoder(r.Body).Decode(&payload)
+		meta, ok := payload["metadata"]
+		if !ok {
+			t.Error("metadata key not found in payload")
 		}
-		w.WriteHeader(http.StatusCreated)
+		if len(meta) != 0 {
+			t.Errorf("expected empty slice, got %v", meta)
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	err := client.SetMetadata("example.com", models.Metadata{Kind: "PRESIGNED"})

@@ -346,11 +346,14 @@ func (c *Client) GetMetadata(zoneID string) ([]models.Metadata, error) {
 }
 
 // SetMetadata creates or replaces a zone metadata entry.
+// Uses PUT with the kind in the URL path for broader compatibility across
+// PowerDNS versions.
 func (c *Client) SetMetadata(zoneID string, meta models.Metadata) error {
 	if meta.Metadata == nil {
 		meta.Metadata = []string{}
 	}
-	_, status, err := c.do("POST", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata", meta)
+	payload := map[string][]string{"metadata": meta.Metadata}
+	_, status, err := c.do("PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata/"+meta.Kind, payload)
 	if err != nil {
 		return err
 	}
