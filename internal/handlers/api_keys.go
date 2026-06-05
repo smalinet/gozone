@@ -38,7 +38,7 @@ func (h *Handler) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
 		 FROM api_keys WHERE user_id = ? ORDER BY created_at DESC`, user.ID,
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch API keys: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch API keys", err)
 		return
 	}
 	defer rows.Close()
@@ -92,7 +92,7 @@ func (h *Handler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.DB.Begin()
 	if err != nil {
-		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to begin transaction", err)
 		return
 	}
 	defer tx.Rollback()
@@ -102,7 +102,7 @@ func (h *Handler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		user.ID, keyHash, description,
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to create API key: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create API key", err)
 		return
 	}
 
@@ -111,12 +111,12 @@ func (h *Handler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		user.ID, fmt.Sprintf("Created API key: %s", description),
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		h.renderInternalError(w, r, "Failed to log activity", err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to commit transaction", err)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		h.renderError(w, r, "Failed to find API key: "+err.Error())
+		h.renderInternalError(w, r, "Failed to find API key", err)
 		return
 	}
 
@@ -151,14 +151,14 @@ func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.DB.Begin()
 	if err != nil {
-		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to begin transaction", err)
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM api_keys WHERE id = ?", keyID)
 	if err != nil {
-		h.renderError(w, r, "Failed to delete API key: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete API key", err)
 		return
 	}
 
@@ -167,12 +167,12 @@ func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 		user.ID, fmt.Sprintf("Deleted API key %s", keyID),
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		h.renderInternalError(w, r, "Failed to log activity", err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to commit transaction", err)
 		return
 	}
 

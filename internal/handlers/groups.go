@@ -25,7 +25,7 @@ func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(`SELECT id, name, description, created_at FROM zone_groups ORDER BY name`)
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch groups: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch groups", err)
 		return
 	}
 	defer rows.Close()
@@ -84,7 +84,7 @@ func (h *Handler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 			h.renderError(w, r, "A group with that name already exists")
 			return
 		}
-		h.renderError(w, r, "Failed to create group: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create group", err)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *Handler) EditGroupPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch group: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch group", err)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (h *Handler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 			h.renderError(w, r, "A group with that name already exists")
 			return
 		}
-		h.renderError(w, r, "Failed to update group: "+err.Error())
+		h.renderInternalError(w, r, "Failed to update group", err)
 		return
 	}
 
