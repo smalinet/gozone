@@ -91,7 +91,7 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.CreateRecord(zoneID, rrset); err != nil {
-		h.renderError(w, r, "Failed to create record: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create record", err)
 		return
 	}
 
@@ -167,7 +167,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 
 	name, recordType, content, ttl, priority, disabled, err := parseRecordForm(r)
 	if err != nil {
-		h.renderError(w, r, err.Error())
+		h.renderInternalError(w, r, "Invalid record form", err)
 		return
 	}
 	if name == "" || recordType == "" || content == "" {
@@ -199,7 +199,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.UpdateRecord(zoneID, rrset); err != nil {
-		h.renderError(w, r, "Failed to update record: "+err.Error())
+		h.renderInternalError(w, r, "Failed to update record", err)
 		return
 	}
 
@@ -337,7 +337,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.CreateRecords(zoneID, rrsets); err != nil {
-		h.renderError(w, r, "Failed to create records: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create records", err)
 		return
 	}
 
@@ -392,7 +392,7 @@ func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 	recordType := r.FormValue("type")
 
 	if err := h.PDNS.DeleteRecord(zoneID, recordName, recordType); err != nil {
-		h.renderError(w, r, "Failed to delete record: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete record", err)
 		return
 	}
 
