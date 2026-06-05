@@ -91,7 +91,7 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.CreateRecord(r.Context(), zoneID, rrset); err != nil {
-		h.renderError(w, r, "Failed to create record: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create record", err)
 		return
 	}
 
@@ -167,7 +167,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 
 	name, recordType, content, ttl, priority, disabled, err := parseRecordForm(r)
 	if err != nil {
-		h.renderError(w, r, err.Error())
+		h.renderInternalError(w, r, "Invalid record form", err)
 		return
 	}
 	if name == "" || recordType == "" || content == "" {
@@ -199,7 +199,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
-		h.renderError(w, r, "Failed to update record: "+err.Error())
+		h.renderInternalError(w, r, "Failed to update record", err)
 		return
 	}
 
@@ -291,7 +291,14 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type logEntry struct {
+		recordType string
+		name       string
+		content    string
+	}
+
 	var rrsets []models.RRSet
+	var logEntries []logEntry
 	for i := 0; i < len(names); i++ {
 		name := strings.TrimSpace(names[i])
 		recordType := strings.TrimSpace(types[i])
@@ -321,13 +328,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 				{Content: content, Priority: priority, Disabled: false},
 			},
 		})
-
-		if _, err := h.DB.Exec(
-			"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'create_record', ?)",
-			user.ID, zoneID, fmt.Sprintf("Created %s record %s -> %s", recordType, name, content),
-		); err != nil {
-			logger.Error("failed to log create_record activity", "zone_id", zoneID, "error", err)
-		}
+		logEntries = append(logEntries, logEntry{recordType, name, content})
 	}
 
 	if len(rrsets) == 0 {
@@ -336,8 +337,17 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.CreateRecords(r.Context(), zoneID, rrsets); err != nil {
-		h.renderError(w, r, "Failed to create records: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create records", err)
 		return
+	}
+
+	for _, e := range logEntries {
+		if _, err := h.DB.Exec(
+			"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'create_record', ?)",
+			user.ID, zoneID, fmt.Sprintf("Created %s record %s -> %s", e.recordType, e.name, e.content),
+		); err != nil {
+			logger.Error("failed to log create_record activity", "zone_id", zoneID, "error", err)
+		}
 	}
 
 	// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
@@ -382,7 +392,7 @@ func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 	recordType := r.FormValue("type")
 
 	if err := h.PDNS.DeleteRecord(r.Context(), zoneID, recordName, recordType); err != nil {
-		h.renderError(w, r, "Failed to delete record: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete record", err)
 		return
 	}
 

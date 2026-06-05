@@ -201,13 +201,14 @@
     <div class="table-responsive">
     <table class="table">
         <thead>
-            <tr><th>Action</th><th>Details</th><th>Time</th></tr>
+            <tr><th>Action</th><th>Details</th><th>User</th><th>Time</th></tr>
         </thead>
         <tbody>
             {{range .Logs}}
             <tr>
                 <td><span class="badge">{{.Action}}</span></td>
                 <td>{{.Details}}</td>
+                <td>{{.Username}}</td>
                 <td>{{.CreatedAt}}</td>
             </tr>
             {{end}}

@@ -58,7 +58,7 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 
 	zones, err := h.PDNS.ListZonesWithInfo(r.Context())
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch zones: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch zones", err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 
 	zone, err := h.PDNS.CreateZone(r.Context(), req)
 	if err != nil {
-		h.renderError(w, r, "Failed to create zone: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create zone", err)
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *Handler) DeleteZone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.DeleteZone(r.Context(), zoneID); err != nil {
-		h.renderError(w, r, "Failed to delete zone: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete zone", err)
 		return
 	}
 
@@ -211,17 +211,43 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
 
-	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
-	if err != nil {
-		h.renderError(w, r, "Zone not found: "+err.Error())
-		return
+	// GetZone and ListRecords share the same path dependency (zoneID) but are
+	// independent of each other. GetMetadata and GetServer are also independent.
+	// Run all four concurrently to reduce total latency from ~4× RTT to ~1× RTT.
+	type zoneRes struct {
+		v   *models.Zone
+		err error
 	}
+	type recordsRes struct {
+		v   []models.RRSet
+		err error
+	}
+	zoneCh := make(chan zoneRes, 1)
+	recordsCh := make(chan recordsRes, 1)
+	metadataCh := make(chan []models.Metadata, 1)
+	serverCh := make(chan *models.ServerInfo, 1)
 
-	records, err := h.PDNS.ListRecords(r.Context(), zoneID)
-	if err != nil {
-		h.renderError(w, r, "Failed to fetch records: "+err.Error())
+	go func() { z, err := h.PDNS.GetZone(r.Context(), zoneID); zoneCh <- zoneRes{z, err} }()
+	go func() { recs, err := h.PDNS.ListRecords(r.Context(), zoneID); recordsCh <- recordsRes{recs, err} }()
+	go func() { m, _ := h.PDNS.GetMetadata(r.Context(), zoneID); metadataCh <- m }()
+	go func() { s, _ := h.PDNS.GetServer(r.Context()); serverCh <- s }()
+
+	zr := <-zoneCh
+	if zr.err != nil {
+		h.renderInternalError(w, r, "Zone not found", zr.err)
 		return
 	}
+	zone := zr.v
+
+	rr := <-recordsCh
+	if rr.err != nil {
+		h.renderInternalError(w, r, "Failed to fetch records", rr.err)
+		return
+	}
+	records := rr.v
+
+	metadata := <-metadataCh
+	srv := <-serverCh
 
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
@@ -252,32 +278,27 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	}
 	paginatedRecords, recordPageInfo := paginate(records, recordPage, recordPerPage)
 
-	// Get zone metadata
-	metadata, _ := h.PDNS.GetMetadata(r.Context(), zoneID)
-
-	// Get activity logs for this zone
 	logs := h.getZoneActivityLogs(zoneID)
 
-	// Get server info for version
-	server, _ := h.PDNS.GetServer(r.Context())
+
 	pdnsVersion := "unknown"
-	if server != nil {
-		pdnsVersion = server.Version
+	if srv != nil {
+		pdnsVersion = srv.Version
 	}
 
 	data := map[string]interface{}{
-		"Title":           zone.Name + " - GoZone",
-		"User":            user,
-		"Zone":            zone,
-		"Records":         paginatedRecords,
-		"RecordPageInfo":  recordPageInfo,
-		"Search":          search,
-		"MetaData":        metadata,
-		"Logs":            logs,
-		"PDNSVersion":     pdnsVersion,
-		"RecordTypes":     GetRecordTypes(),
-		"MetaKinds":       GetMetadataKinds(),
-		"IsAdmin":         user.IsAdmin(),
+		"Title":          zone.Name + " - GoZone",
+		"User":           user,
+		"Zone":           zone,
+		"Records":        paginatedRecords,
+		"RecordPageInfo": recordPageInfo,
+		"Search":         search,
+		"MetaData":       metadata,
+		"Logs":           logs,
+		"PDNSVersion":    pdnsVersion,
+		"RecordTypes":    GetRecordTypes(),
+		"MetaKinds":      GetMetadataKinds(),
+		"IsAdmin":        user.IsAdmin(),
 	}
 	h.render(w, r, "zone_view.html", data)
 }
@@ -290,7 +311,7 @@ func (h *Handler) RectifyZone(w http.ResponseWriter, r *http.Request) {
 
 	zoneID := r.PathValue("zone_id")
 	if err := h.PDNS.RectifyZone(r.Context(), zoneID); err != nil {
-		h.renderError(w, r, "Rectify failed: "+err.Error())
+		h.renderInternalError(w, r, "Rectify failed", err)
 		return
 	}
 
@@ -311,7 +332,7 @@ func (h *Handler) RectifyZone(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) NotifyZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	if err := h.PDNS.NotifySlaves(r.Context(), zoneID); err != nil {
-		h.renderError(w, r, "Notify failed: "+err.Error())
+		h.renderInternalError(w, r, "Notify failed", err)
 		return
 	}
 
@@ -361,7 +382,7 @@ func (h *Handler) CreateMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.SetMetadata(r.Context(), zoneID, meta); err != nil {
-		h.renderError(w, r, "Failed to set metadata: "+err.Error())
+		h.renderInternalError(w, r, "Failed to set metadata", err)
 		return
 	}
 
@@ -396,7 +417,7 @@ func (h *Handler) DeleteMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.DeleteMetadata(r.Context(), zoneID, kind); err != nil {
-		h.renderError(w, r, "Failed to delete metadata: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete metadata", err)
 		return
 	}
 
@@ -434,6 +455,7 @@ func (h *Handler) getZoneActivityLogs(zoneID string) []models.ActivityLog {
 			logger.Error("failed to scan activity log row", "zone_id", zoneID, "error", err)
 			continue
 		}
+		log.Username = username.String
 		logs = append(logs, log)
 	}
 	if err := rows.Err(); err != nil {

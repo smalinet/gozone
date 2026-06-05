@@ -401,6 +401,42 @@ func TestBatchCreateRecords_Success(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Errorf("expected 303 redirect, got %d", w.Code)
 	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='create_record'").Scan(&count)
+	if count != 2 {
+		t.Errorf("expected 2 activity logs, got %d", count)
+	}
+}
+
+func TestBatchCreateRecords_PDNSError_NoLogs(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "name=www&type=A&content=10.0.0.1"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/batch-create", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.BatchCreateRecords(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 (error page), got %d", w.Code)
+	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='create_record'").Scan(&count)
+	if count != 0 {
+		t.Errorf("expected 0 activity logs on PDNS error, got %d", count)
+	}
 }
 
 func TestBatchCreateRecords_EmptyRecords(t *testing.T) {

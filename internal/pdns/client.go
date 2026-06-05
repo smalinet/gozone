@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/babykart/gozone/internal/config"
@@ -140,9 +139,12 @@ func (c *Client) GetStatistics(ctx context.Context) ([]models.StatisticItem, err
 	return stats, nil
 }
 
-// ListZones returns all zones.
+// ListZones returns all zones without their rrsets.
+//
+// ?rrsets=false prevents PowerDNS from including record sets in the response,
+// keeping the payload small regardless of zone size.
 func (c *Client) ListZones(ctx context.Context) ([]models.Zone, error) {
-	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones", nil)
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones?rrsets=false", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -157,41 +159,19 @@ func (c *Client) ListZones(ctx context.Context) ([]models.Zone, error) {
 	return zones, nil
 }
 
-// ListZonesWithInfo fetches all zones and their record counts concurrently.
+// ListZonesWithInfo returns all zones in a single request.
 //
-// It avoids the N+1 sequential request pattern by fetching record lists
-// in parallel goroutines. Results preserve the original zone order.
+// Record counts are not included; the former approach made one additional
+// HTTP request per zone (N+1) which is replaced by a single ListZones call.
 func (c *Client) ListZonesWithInfo(ctx context.Context) ([]models.ZoneWithInfo, error) {
 	zones, err := c.ListZones(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	type result struct {
-		index int
-		count int
-	}
-
-	results := make([]result, len(zones))
-	var wg sync.WaitGroup
-	wg.Add(len(zones))
-
-	for i, z := range zones {
-		go func(i int, zoneID string) {
-			defer wg.Done()
-			records, err := c.ListRecords(ctx, zoneID)
-			if err != nil {
-				results[i] = result{index: i, count: 0}
-				return
-			}
-			results[i] = result{index: i, count: len(records)}
-		}(i, z.ID)
-	}
-	wg.Wait()
-
 	info := make([]models.ZoneWithInfo, len(zones))
 	for i, z := range zones {
-		info[i] = models.ZoneWithInfo{Zone: z, RecordCount: results[i].count}
+		info[i] = models.ZoneWithInfo{Zone: z}
 	}
 	return info, nil
 }

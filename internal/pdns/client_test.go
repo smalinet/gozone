@@ -112,6 +112,9 @@ func TestGetStatistics(t *testing.T) {
 
 func TestListZones(t *testing.T) {
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "rrsets=false" {
+			t.Errorf("expected ?rrsets=false, got ?%s", r.URL.RawQuery)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]models.Zone{
 			{ID: "example.com", Name: "example.com", Kind: "Native"},
@@ -131,23 +134,14 @@ func TestListZones(t *testing.T) {
 }
 
 func TestListZonesWithInfo(t *testing.T) {
+	var callCount int
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		callCount++
 		w.Header().Set("Content-Type", "application/json")
-		if r.Method == "GET" && r.URL.Path == "/api/v1/servers/localhost/zones" {
-			json.NewEncoder(w).Encode([]models.Zone{
-				{ID: "example.com", Name: "example.com", Kind: "Native"},
-				{ID: "test.com", Name: "test.com", Kind: "Native"},
-			})
-		} else {
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"name": "example.com",
-				"kind": "Native",
-				"rrsets": []map[string]interface{}{
-					{"name": "example.com", "type": "SOA", "ttl": 3600},
-					{"name": "www.example.com", "type": "A", "ttl": 3600},
-				},
-			})
-		}
+		json.NewEncoder(w).Encode([]models.Zone{
+			{ID: "example.com", Name: "example.com", Kind: "Native"},
+			{ID: "test.com", Name: "test.com", Kind: "Native"},
+		})
 	})
 
 	info, err := client.ListZonesWithInfo(context.Background())
@@ -160,8 +154,8 @@ func TestListZonesWithInfo(t *testing.T) {
 	if info[0].Zone.Name != "example.com" {
 		t.Errorf("expected example.com, got %s", info[0].Zone.Name)
 	}
-	if info[0].RecordCount != 2 {
-		t.Errorf("expected 2 records, got %d", info[0].RecordCount)
+	if callCount != 1 {
+		t.Errorf("expected exactly 1 HTTP call, got %d (N+1 regression)", callCount)
 	}
 }
 

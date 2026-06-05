@@ -18,7 +18,7 @@ func (h *Handler) ListTSIGKeys(w http.ResponseWriter, r *http.Request) {
 
 	keys, err := h.PDNS.ListTSIGKeys(r.Context())
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch TSIG keys: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch TSIG keys", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *Handler) CreateTSIGKey(w http.ResponseWriter, r *http.Request) {
 		var err error
 		key, err = generateTSIGSecret()
 		if err != nil {
-			h.renderError(w, r, "Failed to generate TSIG secret: "+err.Error())
+			h.renderInternalError(w, r, "Failed to generate TSIG secret", err)
 			return
 		}
 	}
@@ -81,7 +81,7 @@ func (h *Handler) CreateTSIGKey(w http.ResponseWriter, r *http.Request) {
 		Type:      "TSIGKey",
 	})
 	if err != nil {
-		h.renderError(w, r, "Failed to create TSIG key: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create TSIG key", err)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (h *Handler) EditTSIGKeyPage(w http.ResponseWriter, r *http.Request) {
 
 	tsigKey, err := h.PDNS.GetTSIGKey(r.Context(), keyID)
 	if err != nil {
-		h.renderError(w, r, "TSIG key not found: "+err.Error())
+		h.renderInternalError(w, r, "TSIG key not found", err)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *Handler) UpdateTSIGKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.UpdateTSIGKey(r.Context(), keyID, tsigKey); err != nil {
-		h.renderError(w, r, "Failed to update TSIG key: "+err.Error())
+		h.renderInternalError(w, r, "Failed to update TSIG key", err)
 		return
 	}
 
@@ -175,7 +175,7 @@ func (h *Handler) DeleteTSIGKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.DeleteTSIGKey(r.Context(), keyID); err != nil {
-		h.renderError(w, r, "Failed to delete TSIG key: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete TSIG key", err)
 		return
 	}
 
