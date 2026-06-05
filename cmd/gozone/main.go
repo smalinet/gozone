@@ -232,7 +232,6 @@ func main() {
 
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	logger.Info("listening", "addr", addr)
 
 	// Graceful shutdown
 	srv := &http.Server{
