@@ -34,6 +34,7 @@ type ActivityLog struct {
 	Action    string    `json:"action"`
 	Details   string    `json:"details"`
 	CreatedAt time.Time `json:"created_at"`
+	Username  string    `json:"username"`
 }
 
 // APIKey represents an API key.
