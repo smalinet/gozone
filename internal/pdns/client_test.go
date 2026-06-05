@@ -1,6 +1,7 @@
 package pdns
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ func TestGetServers(t *testing.T) {
 		})
 	})
 
-	servers, err := client.GetServers()
+	servers, err := client.GetServers(context.Background())
 	if err != nil {
 		t.Fatalf("GetServers failed: %v", err)
 	}
@@ -56,7 +57,7 @@ func TestGetServer(t *testing.T) {
 		})
 	})
 
-	server, err := client.GetServer()
+	server, err := client.GetServer(context.Background())
 	if err != nil {
 		t.Fatalf("GetServer failed: %v", err)
 	}
@@ -74,7 +75,7 @@ func TestGetStatistics(t *testing.T) {
 			})
 		})
 
-		stats, err := client.GetStatistics()
+		stats, err := client.GetStatistics(context.Background())
 		if err != nil {
 			t.Fatalf("GetStatistics failed: %v", err)
 		}
@@ -92,7 +93,7 @@ func TestGetStatistics(t *testing.T) {
 			w.Write([]byte(`[{"name":"uptime","type":"StatisticItem","value":3600}]`))
 		})
 
-		stats, err := client.GetStatistics()
+		stats, err := client.GetStatistics(context.Background())
 		if err != nil {
 			t.Fatalf("GetStatistics with numeric value failed: %v", err)
 		}
@@ -120,7 +121,7 @@ func TestListZones(t *testing.T) {
 		})
 	})
 
-	zones, err := client.ListZones()
+	zones, err := client.ListZones(context.Background())
 	if err != nil {
 		t.Fatalf("ListZones failed: %v", err)
 	}
@@ -143,7 +144,7 @@ func TestListZonesWithInfo(t *testing.T) {
 		})
 	})
 
-	info, err := client.ListZonesWithInfo()
+	info, err := client.ListZonesWithInfo(context.Background())
 	if err != nil {
 		t.Fatalf("ListZonesWithInfo failed: %v", err)
 	}
@@ -164,7 +165,7 @@ func TestListZonesWithInfo_Empty(t *testing.T) {
 		w.Write([]byte(`[]`))
 	})
 
-	info, err := client.ListZonesWithInfo()
+	info, err := client.ListZonesWithInfo(context.Background())
 	if err != nil {
 		t.Fatalf("ListZonesWithInfo failed: %v", err)
 	}
@@ -181,7 +182,7 @@ func TestGetZone(t *testing.T) {
 		})
 	})
 
-	zone, err := client.GetZone("example.com")
+	zone, err := client.GetZone(context.Background(), "example.com")
 	if err != nil {
 		t.Fatalf("GetZone failed: %v", err)
 	}
@@ -206,7 +207,7 @@ func TestCreateZone(t *testing.T) {
 		})
 	})
 
-	zone, err := client.CreateZone(models.ZoneCreateRequest{
+	zone, err := client.CreateZone(context.Background(), models.ZoneCreateRequest{
 		Name: "newzone.com",
 		Kind: "Native",
 	})
@@ -230,7 +231,7 @@ func TestCreateZone_Defaults(t *testing.T) {
 		json.NewEncoder(w).Encode(models.Zone{Name: req.Name})
 	})
 
-	zone, err := client.CreateZone(models.ZoneCreateRequest{Name: "test.com"})
+	zone, err := client.CreateZone(context.Background(), models.ZoneCreateRequest{Name: "test.com"})
 	if err != nil {
 		t.Fatalf("CreateZone failed: %v", err)
 	}
@@ -247,7 +248,7 @@ func TestDeleteZone(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	if err := client.DeleteZone("example.com"); err != nil {
+	if err := client.DeleteZone(context.Background(), "example.com"); err != nil {
 		t.Fatalf("DeleteZone failed: %v", err)
 	}
 }
@@ -264,7 +265,7 @@ func TestListRecords(t *testing.T) {
 		})
 	})
 
-	records, err := client.ListRecords("example.com")
+	records, err := client.ListRecords(context.Background(), "example.com")
 	if err != nil {
 		t.Fatalf("ListRecords failed: %v", err)
 	}
@@ -291,7 +292,7 @@ func TestCreateRecord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.CreateRecord("example.com", models.RRSet{
+	err := client.CreateRecord(context.Background(), "example.com", models.RRSet{
 		Name: "www.example.com",
 		Type: "A",
 		TTL:  300,
@@ -319,7 +320,7 @@ func TestCreateRecords(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.CreateRecords("example.com", []models.RRSet{
+	err := client.CreateRecords(context.Background(), "example.com", []models.RRSet{
 		{Name: "www.example.com", Type: "A", TTL: 300, Records: []models.RecordInfo{{Content: "1.2.3.4"}}},
 		{Name: "mail.example.com", Type: "A", TTL: 300, Records: []models.RecordInfo{{Content: "1.2.3.5"}}},
 	})
@@ -338,7 +339,7 @@ func TestDeleteRecord(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.DeleteRecord("example.com", "old.example.com", "A")
+	err := client.DeleteRecord(context.Background(), "example.com", "old.example.com", "A")
 	if err != nil {
 		t.Fatalf("DeleteRecord failed: %v", err)
 	}
@@ -352,7 +353,7 @@ func TestRectifyZone(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	if err := client.RectifyZone("example.com"); err != nil {
+	if err := client.RectifyZone(context.Background(), "example.com"); err != nil {
 		t.Fatalf("RectifyZone failed: %v", err)
 	}
 }
@@ -365,7 +366,7 @@ func TestNotifySlaves(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	if err := client.NotifySlaves("example.com"); err != nil {
+	if err := client.NotifySlaves(context.Background(), "example.com"); err != nil {
 		t.Fatalf("NotifySlaves failed: %v", err)
 	}
 }
@@ -390,7 +391,7 @@ func TestUpdateRecord_Success(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.UpdateRecord("example.com", models.RRSet{
+	err := client.UpdateRecord(context.Background(), "example.com", models.RRSet{
 		Name: "www.example.com",
 		Type: "A",
 		TTL:  600,
@@ -408,7 +409,7 @@ func TestUpdateRecord_PDNSError(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	err := client.UpdateRecord("example.com", models.RRSet{
+	err := client.UpdateRecord(context.Background(), "example.com", models.RRSet{
 		Name: "www.example.com",
 		Type: "A",
 		TTL:  600,
@@ -427,7 +428,7 @@ func TestClientError(t *testing.T) {
 		w.Write([]byte(`{"error":"something went wrong"}`))
 	})
 
-	_, err := client.GetZone("nonexistent")
+	_, err := client.GetZone(context.Background(), "nonexistent")
 	if err == nil {
 		t.Error("expected error for 500 response")
 	}
@@ -438,7 +439,7 @@ func TestClientUnauthorized(t *testing.T) {
 		w.WriteHeader(http.StatusUnauthorized)
 	})
 
-	_, err := client.GetServers()
+	_, err := client.GetServers(context.Background())
 	if err == nil {
 		t.Error("expected error for 401 response")
 	}
@@ -465,7 +466,7 @@ func TestGetMetadata(t *testing.T) {
 		})
 	})
 
-	metadata, err := client.GetMetadata("example.com")
+	metadata, err := client.GetMetadata(context.Background(), "example.com")
 	if err != nil {
 		t.Fatalf("GetMetadata failed: %v", err)
 	}
@@ -486,7 +487,7 @@ func TestGetMetadata_Empty(t *testing.T) {
 		w.Write([]byte(`[]`))
 	})
 
-	metadata, err := client.GetMetadata("example.com")
+	metadata, err := client.GetMetadata(context.Background(), "example.com")
 	if err != nil {
 		t.Fatalf("GetMetadata failed: %v", err)
 	}
@@ -514,7 +515,7 @@ func TestSetMetadata(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.SetMetadata("example.com", models.Metadata{
+	err := client.SetMetadata(context.Background(), "example.com", models.Metadata{
 		Kind:     "ALSO-NOTIFY",
 		Metadata: []string{"10.0.0.1"},
 	})
@@ -540,7 +541,7 @@ func TestSetMetadata_NilValues(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.SetMetadata("example.com", models.Metadata{Kind: "PRESIGNED"})
+	err := client.SetMetadata(context.Background(), "example.com", models.Metadata{Kind: "PRESIGNED"})
 	if err != nil {
 		t.Fatalf("SetMetadata failed: %v", err)
 	}
@@ -554,7 +555,7 @@ func TestDeleteMetadata(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	if err := client.DeleteMetadata("example.com", "PRESIGNED"); err != nil {
+	if err := client.DeleteMetadata(context.Background(), "example.com", "PRESIGNED"); err != nil {
 		t.Fatalf("DeleteMetadata failed: %v", err)
 	}
 }
@@ -564,7 +565,7 @@ func TestDeleteMetadata_Error(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	err := client.DeleteMetadata("example.com", "NONEXISTENT")
+	err := client.DeleteMetadata(context.Background(), "example.com", "NONEXISTENT")
 	if err == nil {
 		t.Error("expected error for 404 response")
 	}
@@ -582,7 +583,7 @@ func TestListTSIGKeys(t *testing.T) {
 		})
 	})
 
-	keys, err := client.ListTSIGKeys()
+	keys, err := client.ListTSIGKeys(context.Background())
 	if err != nil {
 		t.Fatalf("ListTSIGKeys failed: %v", err)
 	}
@@ -600,7 +601,7 @@ func TestListTSIGKeys_Empty(t *testing.T) {
 		w.Write([]byte(`[]`))
 	})
 
-	keys, err := client.ListTSIGKeys()
+	keys, err := client.ListTSIGKeys(context.Background())
 	if err != nil {
 		t.Fatalf("ListTSIGKeys failed: %v", err)
 	}
@@ -620,7 +621,7 @@ func TestGetTSIGKey(t *testing.T) {
 		})
 	})
 
-	key, err := client.GetTSIGKey("my-key.")
+	key, err := client.GetTSIGKey(context.Background(), "my-key.")
 	if err != nil {
 		t.Fatalf("GetTSIGKey failed: %v", err)
 	}
@@ -646,7 +647,7 @@ func TestCreateTSIGKey(t *testing.T) {
 		json.NewEncoder(w).Encode(req)
 	})
 
-	key, err := client.CreateTSIGKey(models.TSIGKey{
+	key, err := client.CreateTSIGKey(context.Background(), models.TSIGKey{
 		Name:      "new-key.",
 		Algorithm: "hmac-sha256",
 		Key:       "base64secret",
@@ -673,7 +674,7 @@ func TestUpdateTSIGKey(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.UpdateTSIGKey("my-key.", models.TSIGKey{
+	err := client.UpdateTSIGKey(context.Background(), "my-key.", models.TSIGKey{
 		Name:      "my-key.",
 		Algorithm: "hmac-sha512",
 		Key:       "updated-secret",
@@ -692,7 +693,7 @@ func TestDeleteTSIGKey(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	if err := client.DeleteTSIGKey("my-key."); err != nil {
+	if err := client.DeleteTSIGKey(context.Background(), "my-key."); err != nil {
 		t.Fatalf("DeleteTSIGKey failed: %v", err)
 	}
 }
@@ -702,7 +703,7 @@ func TestDeleteTSIGKey_Error(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	err := client.DeleteTSIGKey("nonexistent.")
+	err := client.DeleteTSIGKey(context.Background(), "nonexistent.")
 	if err == nil {
 		t.Error("expected error for 404 response")
 	}

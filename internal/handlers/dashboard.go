@@ -15,16 +15,16 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
 	// Fetch statistics
-	stats, err := h.PDNS.GetStatistics()
+	stats, err := h.PDNS.GetStatistics(r.Context())
 	if err != nil {
 		logger.Error("failed to fetch PDNS statistics", "error", err)
 	}
 
 	// Get server info
-	server, _ := h.PDNS.GetServer()
+	server, _ := h.PDNS.GetServer(r.Context())
 
 	// Get zone count (filtered by user's allowed zones)
-	zones, _ := h.PDNS.ListZones()
+	zones, _ := h.PDNS.ListZones(r.Context())
 	zones, _ = h.filterZonesForUser(r, zones)
 	zoneCount := 0
 	if zones != nil {
