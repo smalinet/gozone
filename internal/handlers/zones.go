@@ -434,6 +434,7 @@ func (h *Handler) getZoneActivityLogs(zoneID string) []models.ActivityLog {
 			logger.Error("failed to scan activity log row", "zone_id", zoneID, "error", err)
 			continue
 		}
+		log.Username = username.String
 		logs = append(logs, log)
 	}
 	if err := rows.Err(); err != nil {

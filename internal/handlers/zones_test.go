@@ -770,6 +770,24 @@ func TestListZones_Search_CaseInsensitive(t *testing.T) {
 	}
 }
 
+func TestGetZoneActivityLogs_UsernamePopulated(t *testing.T) {
+	h := newTestHandler(t)
+	testutil.SeedTestUser(t, h.DB, "alice", "alice@example.com", "alice", false)
+
+	h.DB.Exec(
+		"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'create_record', ?)",
+		1, "example.com", "Created A record www -> 1.2.3.4",
+	)
+
+	logs := h.getZoneActivityLogs("example.com")
+	if len(logs) != 1 {
+		t.Fatalf("expected 1 log entry, got %d", len(logs))
+	}
+	if logs[0].Username != "alice" {
+		t.Errorf("expected Username 'alice', got %q", logs[0].Username)
+	}
+}
+
 func TestViewZone_RecordsSearch(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
