@@ -14,6 +14,7 @@ import (
 	"github.com/babykart/gozone/internal/database"
 	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
+	"github.com/babykart/gozone/internal/models"
 	"github.com/babykart/gozone/internal/pdns"
 )
 
@@ -75,7 +76,7 @@ func (h *Handler) render(w http.ResponseWriter, r *http.Request, name string, da
 		data["User"] = middleware.GetUser(r)
 	}
 	if _, ok := data["IsAdmin"]; !ok {
-		user := middleware.GetUser(r)
+		user, _ := data["User"].(*models.User)
 		data["IsAdmin"] = user != nil && user.IsAdmin()
 	}
 	if _, ok := data["Section"]; !ok {
