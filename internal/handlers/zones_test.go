@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/models"
@@ -767,6 +769,46 @@ func TestListZones_Search_CaseInsensitive(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestViewZone_ParallelPDNSCalls(t *testing.T) {
+	var active atomic.Int32
+	var maxConcurrent atomic.Int32
+
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		cur := active.Add(1)
+		for {
+			prev := maxConcurrent.Load()
+			if cur <= prev || maxConcurrent.CompareAndSwap(prev, cur) {
+				break
+			}
+		}
+		// Hold the request open briefly so concurrent goroutines can overlap.
+		time.Sleep(5 * time.Millisecond)
+		active.Add(-1)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(models.Zone{
+			ID: "example.com", Name: "example.com", Kind: "Native",
+		})
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com", nil)
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.ViewZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if got := maxConcurrent.Load(); got < 2 {
+		t.Errorf("expected ≥ 2 concurrent PDNS calls, got %d — calls may be sequential", got)
 	}
 }
 
