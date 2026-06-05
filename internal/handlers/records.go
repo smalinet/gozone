@@ -291,7 +291,14 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type logEntry struct {
+		recordType string
+		name       string
+		content    string
+	}
+
 	var rrsets []models.RRSet
+	var logEntries []logEntry
 	for i := 0; i < len(names); i++ {
 		name := strings.TrimSpace(names[i])
 		recordType := strings.TrimSpace(types[i])
@@ -321,13 +328,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 				{Content: content, Priority: priority, Disabled: false},
 			},
 		})
-
-		if _, err := h.DB.Exec(
-			"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'create_record', ?)",
-			user.ID, zoneID, fmt.Sprintf("Created %s record %s -> %s", recordType, name, content),
-		); err != nil {
-			logger.Error("failed to log create_record activity", "zone_id", zoneID, "error", err)
-		}
+		logEntries = append(logEntries, logEntry{recordType, name, content})
 	}
 
 	if len(rrsets) == 0 {
@@ -338,6 +339,15 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	if err := h.PDNS.CreateRecords(zoneID, rrsets); err != nil {
 		h.renderError(w, r, "Failed to create records: "+err.Error())
 		return
+	}
+
+	for _, e := range logEntries {
+		if _, err := h.DB.Exec(
+			"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'create_record', ?)",
+			user.ID, zoneID, fmt.Sprintf("Created %s record %s -> %s", e.recordType, e.name, e.content),
+		); err != nil {
+			logger.Error("failed to log create_record activity", "zone_id", zoneID, "error", err)
+		}
 	}
 
 	// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
