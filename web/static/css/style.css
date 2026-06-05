@@ -839,19 +839,21 @@ details summary {
 
 /* Server Info */
 .server-info {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.35rem 1rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .server-info-row {
-    display: contents;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     font-size: 0.875rem;
 }
 
 .server-info-label {
     font-weight: 600;
+    flex: 0 0 12rem;
     color: var(--text-muted);
 }
 
