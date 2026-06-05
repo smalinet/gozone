@@ -838,21 +838,19 @@ details summary {
 
 /* Server Info */
 .server-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.35rem 1rem;
+    align-items: center;
 }
 
 .server-info-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    display: contents;
     font-size: 0.875rem;
 }
 
 .server-info-label {
     font-weight: 600;
-    min-width: 6rem;
     color: var(--text-muted);
 }
 
