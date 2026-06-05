@@ -24,6 +24,24 @@ func newTestClient(t *testing.T, handler http.HandlerFunc) (*Client, *httptest.S
 	return client, server
 }
 
+func TestNewClient_URLNormalization(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"http://pdns.example.com", "http://pdns.example.com/api/v1"},
+		{"http://pdns.example.com/", "http://pdns.example.com/api/v1"},
+		{"http://pdns.example.com/api/v1", "http://pdns.example.com/api/v1"},
+		{"http://pdns.example.com/api/v1/", "http://pdns.example.com/api/v1"},
+	}
+	for _, tc := range cases {
+		c := NewClient(&config.PowerDNSConfig{APIURL: tc.input, ServerID: "localhost"})
+		if c.baseURL != tc.want {
+			t.Errorf("input %q: got %q, want %q", tc.input, c.baseURL, tc.want)
+		}
+	}
+}
+
 func TestGetServers(t *testing.T) {
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-API-Key") != "test-api-key" {
