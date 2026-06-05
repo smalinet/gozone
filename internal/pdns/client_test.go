@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/babykart/gozone/internal/config"
@@ -161,6 +162,43 @@ func TestListZonesWithInfo(t *testing.T) {
 	}
 	if info[0].RecordCount != 2 {
 		t.Errorf("expected 2 records, got %d", info[0].RecordCount)
+	}
+}
+
+func TestListZonesWithInfo_ConcurrencyLimit(t *testing.T) {
+	const numZones = 30
+	var active atomic.Int32
+	var maxObserved atomic.Int32
+
+	zones := make([]models.Zone, numZones)
+	for i := range zones {
+		zones[i] = models.Zone{ID: "zone" + string(rune('a'+i)) + ".com", Name: "zone.com", Kind: "Native"}
+	}
+
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/v1/servers/localhost/zones" {
+			json.NewEncoder(w).Encode(zones)
+			return
+		}
+		// Per-zone record fetch — track concurrency.
+		cur := active.Add(1)
+		for {
+			prev := maxObserved.Load()
+			if cur <= prev || maxObserved.CompareAndSwap(prev, cur) {
+				break
+			}
+		}
+		active.Add(-1)
+		json.NewEncoder(w).Encode(map[string]interface{}{"rrsets": []interface{}{}})
+	})
+
+	if _, err := client.ListZonesWithInfo(); err != nil {
+		t.Fatalf("ListZonesWithInfo failed: %v", err)
+	}
+
+	if got := maxObserved.Load(); got > maxConcurrentRecordFetches {
+		t.Errorf("max concurrent fetches = %d, want ≤ %d", got, maxConcurrentRecordFetches)
 	}
 }
 

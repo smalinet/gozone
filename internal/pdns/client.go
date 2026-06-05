@@ -156,10 +156,16 @@ func (c *Client) ListZones() ([]models.Zone, error) {
 	return zones, nil
 }
 
+// maxConcurrentRecordFetches caps the number of goroutines that may call
+// ListRecords simultaneously inside ListZonesWithInfo, preventing a large
+// zone list from opening hundreds of connections to PowerDNS at once.
+const maxConcurrentRecordFetches = 10
+
 // ListZonesWithInfo fetches all zones and their record counts concurrently.
 //
 // It avoids the N+1 sequential request pattern by fetching record lists
-// in parallel goroutines. Results preserve the original zone order.
+// in parallel goroutines. Concurrency is capped at maxConcurrentRecordFetches
+// to avoid overwhelming PowerDNS. Results preserve the original zone order.
 func (c *Client) ListZonesWithInfo() ([]models.ZoneWithInfo, error) {
 	zones, err := c.ListZones()
 	if err != nil {
@@ -172,12 +178,15 @@ func (c *Client) ListZonesWithInfo() ([]models.ZoneWithInfo, error) {
 	}
 
 	results := make([]result, len(zones))
+	sem := make(chan struct{}, maxConcurrentRecordFetches)
 	var wg sync.WaitGroup
 	wg.Add(len(zones))
 
 	for i, z := range zones {
 		go func(i int, zoneID string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			records, err := c.ListRecords(zoneID)
 			if err != nil {
 				results[i] = result{index: i, count: 0}
