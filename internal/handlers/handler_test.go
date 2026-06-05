@@ -40,7 +40,7 @@ func newTestHandler(t *testing.T) *Handler {
 		{{define "user_edit.html"}}Edit User{{end}}
 		{{define "profile.html"}}Profile{{end}}
 		{{define "groups.html"}}Groups: {{range .Groups}}{{.Name}} {{end}}{{end}}
-		{{define "group_edit.html"}}GroupEdit: {{.Group.Name}} {{range .Members}}{{.Username}} {{end}}Zones: {{range .GroupZones}}{{.}} {{end}}{{end}}
+		{{define "group_edit.html"}}GroupEdit: {{.Group.Name}} {{range .Members}}{{.Username}} {{end}}Zones: {{range .GroupZones}}{{.}} {{end}}AllUsers: {{range .AllUsers}}{{.Username}} {{end}}AllZones: {{range .AllZones}}{{.Zone.Name}} {{end}}{{end}}
 		{{define "tsigkeys.html"}}TSIG Keys{{end}}
 		{{define "tsigkey_create.html"}}Create TSIG Key{{end}}
 		{{define "tsigkey_edit.html"}}Edit TSIG Key{{end}}
@@ -73,7 +73,7 @@ func newTestHandlerWithPDNS(t *testing.T, handler testutil.PDNSHandlerFunc) (*Ha
 		{{define "user_edit.html"}}Edit User{{end}}
 		{{define "profile.html"}}Profile{{end}}
 		{{define "groups.html"}}Groups: {{range .Groups}}{{.Name}} {{end}}{{end}}
-		{{define "group_edit.html"}}GroupEdit: {{.Group.Name}} {{range .Members}}{{.Username}} {{end}}Zones: {{range .GroupZones}}{{.}} {{end}}{{end}}
+		{{define "group_edit.html"}}GroupEdit: {{.Group.Name}} {{range .Members}}{{.Username}} {{end}}Zones: {{range .GroupZones}}{{.}} {{end}}AllUsers: {{range .AllUsers}}{{.Username}} {{end}}AllZones: {{range .AllZones}}{{.Zone.Name}} {{end}}{{end}}
 		{{define "tsigkeys.html"}}TSIG Keys{{end}}
 		{{define "tsigkey_create.html"}}Create TSIG Key{{end}}
 		{{define "tsigkey_edit.html"}}Edit TSIG Key{{end}}

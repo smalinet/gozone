@@ -52,10 +52,19 @@ func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 // CreateGroupPage renders the group creation form (GET /groups/new).
 func (h *Handler) CreateGroupPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
+
+	allUsers, _ := h.getAllUsers()
+	allZones, _ := h.PDNS.ListZonesWithInfo(r.Context())
+
 	data := map[string]interface{}{
-		"Title":   "Create Group - GoZone",
-		"User":    user,
-		"IsAdmin": user.IsAdmin(),
+		"Title":      "Create Group - GoZone",
+		"User":       user,
+		"Group":      groupInfo{},
+		"Members":    []models.User{},
+		"GroupZones": []string{},
+		"AllUsers":   allUsers,
+		"AllZones":   allZones,
+		"IsAdmin":    user.IsAdmin(),
 	}
 	h.render(w, r, "group_edit.html", data)
 }

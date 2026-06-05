@@ -93,6 +93,8 @@ func TestCreateGroupPage(t *testing.T) {
 	h, srv := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
 	defer srv.Close()
 
+	seedUserWithHash(t, h, "regularuser", "pass", "user")
+
 	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
 	w := httptest.NewRecorder()
 	r := withUserContext(httptest.NewRequest(http.MethodGet, "/groups/new", nil), user)
@@ -100,6 +102,9 @@ func TestCreateGroupPage(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "regularuser") {
+		t.Errorf("expected response to contain seeded user in AllUsers dropdown, got: %s", w.Body.String())
 	}
 }
 
