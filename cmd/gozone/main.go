@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io/fs"
 	"mime"
+	"strings"
 	"net/http"
 	"net/url"
 	"os"
@@ -275,12 +276,30 @@ func fileServer(r chi.Router, path string, root http.FileSystem) {
 	})
 }
 
+// relativeName strips the zone suffix from a record name. The apex (zone name
+// itself) is displayed as "@". For example, with zone "example.com.", the
+// record "www.example.com." becomes "www" and "example.com." becomes "@".
+func relativeName(recordName, zoneName string) string {
+	if recordName == zoneName {
+		return "@"
+	}
+	if !strings.HasSuffix(zoneName, ".") {
+		zoneName += "."
+	}
+	if strings.HasSuffix(recordName, zoneName) {
+		rel := strings.TrimSuffix(recordName, zoneName)
+		return strings.TrimSuffix(rel, ".")
+	}
+	return recordName
+}
+
 // parseTemplates loads all HTML templates from the embedded filesystem.
 func parseTemplates() *template.Template {
 	funcMap := template.FuncMap{
-		"add":      func(a, b int) int { return a + b },
-		"sub":      func(a, b int) int { return a - b },
-		"urlquery": url.QueryEscape,
+		"add":          func(a, b int) int { return a + b },
+		"sub":          func(a, b int) int { return a - b },
+		"urlquery":     url.QueryEscape,
+		"relativeName": relativeName,
 	}
 	tmpl, err := template.New("base").Funcs(funcMap).ParseFS(web.FS, "templates/*.html")
 	if err != nil {
