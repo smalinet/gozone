@@ -39,12 +39,6 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
 
-	if r.Method != http.MethodPost {
-		// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
-		http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
-		return
-	}
-
 	name := strings.TrimSpace(r.FormValue("name"))
 	recordType := strings.TrimSpace(r.FormValue("type"))
 	content := strings.TrimSpace(r.FormValue("content"))
@@ -158,12 +152,6 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 // content, ttl, priority, and disabled form values.
 func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
-
-	if r.Method != http.MethodPost {
-		// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
-		http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
-		return
-	}
 
 	name, recordType, content, ttl, priority, disabled, err := parseRecordForm(r)
 	if err != nil {
@@ -371,12 +359,6 @@ func parseRecordForm(r *http.Request) (name, recordType, content string, ttl, pr
 func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
-
-	if r.Method != http.MethodPost {
-		// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
-		http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
-		return
-	}
 
 	recordName := r.FormValue("name")
 	recordType := r.FormValue("type")

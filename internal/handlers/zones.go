@@ -120,11 +120,6 @@ func (h *Handler) CreateZonePage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/zones", http.StatusSeeOther)
-		return
-	}
-
 	name := strings.TrimSpace(r.FormValue("name"))
 	kind := strings.TrimSpace(r.FormValue("kind"))
 	nameservers := strings.TrimSpace(r.FormValue("nameservers"))
@@ -178,11 +173,6 @@ func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 // Requires admin role.
 func (h *Handler) DeleteZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
-
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/zones", http.StatusSeeOther)
-		return
-	}
 
 	zoneID := r.FormValue("zone_id")
 	if zoneID == "" {
@@ -324,11 +314,6 @@ func (h *Handler) NotifyZone(w http.ResponseWriter, r *http.Request) {
 // Requires admin role. The kind and values are submitted via form values.
 // Redirects back to the zone view on success.
 func (h *Handler) CreateMetadata(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/zones", http.StatusSeeOther)
-		return
-	}
-
 	zoneID := r.PathValue("zone_id")
 	kind := strings.TrimSpace(r.FormValue("kind"))
 	valuesRaw := strings.TrimSpace(r.FormValue("values"))
@@ -382,11 +367,6 @@ func (h *Handler) CreateMetadata(w http.ResponseWriter, r *http.Request) {
 // Requires admin role. The kind is submitted via form value.
 // Redirects back to the zone view on success.
 func (h *Handler) DeleteMetadata(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/zones", http.StatusSeeOther)
-		return
-	}
-
 	zoneID := r.PathValue("zone_id")
 	kind := strings.TrimSpace(r.FormValue("kind"))
 

@@ -62,11 +62,6 @@ func (h *Handler) CreateGroupPage(w http.ResponseWriter, r *http.Request) {
 
 // CreateGroup inserts a new zone group (POST /groups/create).
 func (h *Handler) CreateGroup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/groups", http.StatusSeeOther)
-		return
-	}
-
 	name := strings.TrimSpace(r.FormValue("name"))
 	description := strings.TrimSpace(r.FormValue("description"))
 
@@ -141,11 +136,6 @@ func (h *Handler) EditGroupPage(w http.ResponseWriter, r *http.Request) {
 
 // UpdateGroup updates a group's name and description (POST /groups/{group_id}/update).
 func (h *Handler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/groups", http.StatusSeeOther)
-		return
-	}
-
 	groupIDStr := r.PathValue("group_id")
 	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
 	if err != nil {
@@ -178,11 +168,6 @@ func (h *Handler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 
 // DeleteGroup deletes a group (POST /groups/{group_id}/delete).
 func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/groups", http.StatusSeeOther)
-		return
-	}
-
 	groupIDStr := r.PathValue("group_id")
 	if _, err := h.DB.Exec("DELETE FROM zone_groups WHERE id = ?", groupIDStr); err != nil {
 		logger.Error("failed to delete group", "group_id", groupIDStr, "error", err)
