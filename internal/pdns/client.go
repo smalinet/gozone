@@ -34,10 +34,8 @@ type Client struct {
 // an HTTP client with a 30-second request timeout.
 func NewClient(cfg *config.PowerDNSConfig) *Client {
 	baseURL := strings.TrimRight(cfg.APIURL, "/")
-	if !strings.HasSuffix(baseURL, "api/v1") {
-		if !strings.HasSuffix(baseURL, "/api/v1") {
-			baseURL += "/api/v1"
-		}
+	if !strings.HasSuffix(baseURL, "/api/v1") {
+		baseURL += "/api/v1"
 	}
 
 	return &Client{
