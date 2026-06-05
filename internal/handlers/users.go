@@ -25,7 +25,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		 FROM users ORDER BY username`,
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch users: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch users", err)
 		return
 	}
 	defer rows.Close()
@@ -112,7 +112,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.DB.Begin()
 	if err != nil {
-		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to begin transaction", err)
 		return
 	}
 	defer tx.Rollback()
@@ -123,7 +123,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		username, email, string(hash), firstName, lastName, role,
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to create user: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create user", err)
 		return
 	}
 
@@ -133,12 +133,12 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		admin.ID, fmt.Sprintf("Created user %s (id: %d)", username, userID),
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		h.renderInternalError(w, r, "Failed to log activity", err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to commit transaction", err)
 		return
 	}
 
@@ -220,7 +220,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.DB.Begin()
 	if err != nil {
-		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to begin transaction", err)
 		return
 	}
 	defer tx.Rollback()
@@ -231,7 +231,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		email, firstName, lastName, role, enabledVal, userID,
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to update user: "+err.Error())
+		h.renderInternalError(w, r, "Failed to update user", err)
 		return
 	}
 
@@ -244,7 +244,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = tx.Exec("UPDATE users SET password_hash = ? WHERE id = ?", string(hash), userID)
 		if err != nil {
-			h.renderError(w, r, "Failed to update password: "+err.Error())
+			h.renderInternalError(w, r, "Failed to update password", err)
 			return
 		}
 	}
@@ -254,12 +254,12 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		admin.ID, fmt.Sprintf("Updated user %d", userID),
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		h.renderInternalError(w, r, "Failed to log activity", err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to commit transaction", err)
 		return
 	}
 
@@ -288,14 +288,14 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.DB.Begin()
 	if err != nil {
-		h.renderError(w, r, "Failed to begin transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to begin transaction", err)
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM users WHERE id = ?", userID)
 	if err != nil {
-		h.renderError(w, r, "Failed to delete user: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete user", err)
 		return
 	}
 
@@ -304,12 +304,12 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		admin.ID, fmt.Sprintf("Deleted user %d", userID),
 	)
 	if err != nil {
-		h.renderError(w, r, "Failed to log activity: "+err.Error())
+		h.renderInternalError(w, r, "Failed to log activity", err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		h.renderError(w, r, "Failed to commit transaction: "+err.Error())
+		h.renderInternalError(w, r, "Failed to commit transaction", err)
 		return
 	}
 

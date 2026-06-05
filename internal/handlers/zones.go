@@ -58,7 +58,7 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 
 	zones, err := h.PDNS.ListZonesWithInfo()
 	if err != nil {
-		h.renderError(w, r, "Failed to fetch zones: "+err.Error())
+		h.renderInternalError(w, r, "Failed to fetch zones", err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 
 	zone, err := h.PDNS.CreateZone(req)
 	if err != nil {
-		h.renderError(w, r, "Failed to create zone: "+err.Error())
+		h.renderInternalError(w, r, "Failed to create zone", err)
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *Handler) DeleteZone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.DeleteZone(zoneID); err != nil {
-		h.renderError(w, r, "Failed to delete zone: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete zone", err)
 		return
 	}
 
@@ -234,14 +234,14 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 
 	zr := <-zoneCh
 	if zr.err != nil {
-		h.renderError(w, r, "Zone not found: "+zr.err.Error())
+		h.renderInternalError(w, r, "Zone not found", zr.err)
 		return
 	}
 	zone := zr.v
 
 	rr := <-recordsCh
 	if rr.err != nil {
-		h.renderError(w, r, "Failed to fetch records: "+rr.err.Error())
+		h.renderInternalError(w, r, "Failed to fetch records", rr.err)
 		return
 	}
 	records := rr.v
@@ -310,7 +310,7 @@ func (h *Handler) RectifyZone(w http.ResponseWriter, r *http.Request) {
 
 	zoneID := r.PathValue("zone_id")
 	if err := h.PDNS.RectifyZone(zoneID); err != nil {
-		h.renderError(w, r, "Rectify failed: "+err.Error())
+		h.renderInternalError(w, r, "Rectify failed", err)
 		return
 	}
 
@@ -331,7 +331,7 @@ func (h *Handler) RectifyZone(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) NotifyZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	if err := h.PDNS.NotifySlaves(zoneID); err != nil {
-		h.renderError(w, r, "Notify failed: "+err.Error())
+		h.renderInternalError(w, r, "Notify failed", err)
 		return
 	}
 
@@ -381,7 +381,7 @@ func (h *Handler) CreateMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.SetMetadata(zoneID, meta); err != nil {
-		h.renderError(w, r, "Failed to set metadata: "+err.Error())
+		h.renderInternalError(w, r, "Failed to set metadata", err)
 		return
 	}
 
@@ -416,7 +416,7 @@ func (h *Handler) DeleteMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.PDNS.DeleteMetadata(zoneID, kind); err != nil {
-		h.renderError(w, r, "Failed to delete metadata: "+err.Error())
+		h.renderInternalError(w, r, "Failed to delete metadata", err)
 		return
 	}
 
@@ -454,6 +454,7 @@ func (h *Handler) getZoneActivityLogs(zoneID string) []models.ActivityLog {
 			logger.Error("failed to scan activity log row", "zone_id", zoneID, "error", err)
 			continue
 		}
+		log.Username = username.String
 		logs = append(logs, log)
 	}
 	if err := rows.Err(); err != nil {

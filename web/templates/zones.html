@@ -24,7 +24,7 @@
             <th>Name</th>
             <th>Type</th>
             <th>Serial</th>
-            <th>Records</th>
+            <th></th>
             <th>DNSSEC</th>
             <th>Actions</th>
         </tr>
@@ -35,7 +35,7 @@
             <td><a href="/zones/{{.Zone.ID}}"><strong>{{.Zone.Name}}</strong></a></td>
             <td><span class="badge">{{.Zone.Kind}}</span></td>
             <td>{{.Zone.Serial}}</td>
-            <td>{{.RecordCount}}</td>
+            <td></td>
             <td>{{if .Zone.DNSSEC}}Yes{{else}}No{{end}}</td>
             <td>
                 <a href="/zones/{{.Zone.ID}}" class="btn btn-sm btn-secondary">View</a>

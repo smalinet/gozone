@@ -10,10 +10,12 @@ import (
 	"unicode/utf8"
 )
 
-// rfc1035Label is a single DNS label per RFC 1035 section 2.3.1:
-// must start with a letter, end with a letter or digit, and contain only
-// letters, digits, and hyphens in between. Maximum length: 63 characters.
-var rfc1035Label = regexp.MustCompile(`^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
+// rfc1035Label validates a single DNS label. RFC 1123 §2.1 relaxed the
+// original RFC 1035 restriction to allow labels starting with a digit,
+// which is required for reverse DNS zones (e.g. 192.in-addr.arpa).
+// Labels must start and end with a letter or digit, contain only letters,
+// digits, and hyphens, and be at most 63 characters long.
+var rfc1035Label = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
 
 // ValidateDomainName checks that a domain name conforms to RFC 1035.
 //

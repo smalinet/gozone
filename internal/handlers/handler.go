@@ -12,6 +12,7 @@ import (
 
 	"github.com/babykart/gozone/internal/config"
 	"github.com/babykart/gozone/internal/database"
+	"github.com/babykart/gozone/internal/logger"
 	"github.com/babykart/gozone/internal/middleware"
 	"github.com/babykart/gozone/internal/pdns"
 )
@@ -59,6 +60,12 @@ func sectionFromTemplate(name string) string {
 
 // render executes a template and automatically injects the CSRF token,
 // authenticated user, admin flag, and active section into the data map.
+// renderInternalError logs the error server-side and shows a generic message to the user.
+func (h *Handler) renderInternalError(w http.ResponseWriter, r *http.Request, msg string, err error) {
+	logger.Error(msg, "error", err)
+	h.renderError(w, r, msg)
+}
+
 func (h *Handler) render(w http.ResponseWriter, r *http.Request, name string, data map[string]interface{}) {
 	if data == nil {
 		data = make(map[string]interface{})
