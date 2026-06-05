@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -43,6 +44,11 @@ func main() {
 
 	// Initialize structured logging with configured level
 	logger.Init(cfg.Logging.Level)
+
+	// Ensure .ico files are served with the correct MIME type
+	if err := mime.AddExtensionType(".ico", "image/x-icon"); err != nil {
+		logger.Warn("failed to register favicon MIME type", "error", err)
+	}
 
 	// Open database
 	db, err := database.New(&cfg.Database)
