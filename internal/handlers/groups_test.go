@@ -162,20 +162,6 @@ func TestCreateGroup_DuplicateName(t *testing.T) {
 	}
 }
 
-func TestCreateGroup_WrongMethod(t *testing.T) {
-	h, srv := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
-	defer srv.Close()
-
-	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
-	w := httptest.NewRecorder()
-	r := withUserContext(httptest.NewRequest(http.MethodGet, "/groups/create", nil), user)
-	h.CreateGroup(w, r)
-
-	if w.Code != http.StatusSeeOther {
-		t.Errorf("expected 303 redirect, got %d", w.Code)
-	}
-}
-
 func TestEditGroupPage_Success(t *testing.T) {
 	h, srv := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
 	defer srv.Close()

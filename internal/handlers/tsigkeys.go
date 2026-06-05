@@ -48,11 +48,6 @@ func (h *Handler) CreateTSIGKeyPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateTSIGKey(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/tsigkeys", http.StatusSeeOther)
-		return
-	}
-
 	name := strings.TrimSpace(r.FormValue("name"))
 	algorithm := strings.TrimSpace(r.FormValue("algorithm"))
 	key := strings.TrimSpace(r.FormValue("key"))
@@ -119,11 +114,6 @@ func (h *Handler) EditTSIGKeyPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateTSIGKey(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/tsigkeys", http.StatusSeeOther)
-		return
-	}
-
 	keyID := r.PathValue("key_id")
 	algorithm := strings.TrimSpace(r.FormValue("algorithm"))
 	key := strings.TrimSpace(r.FormValue("key"))
@@ -162,11 +152,6 @@ func (h *Handler) UpdateTSIGKey(w http.ResponseWriter, r *http.Request) {
 // DeleteTSIGKey deletes a TSIG key (POST /tsigkeys/delete).
 func (h *Handler) DeleteTSIGKey(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
-
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/tsigkeys", http.StatusSeeOther)
-		return
-	}
 
 	keyID := strings.TrimSpace(r.FormValue("key_id"))
 	if keyID == "" {

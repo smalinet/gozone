@@ -74,11 +74,6 @@ func (h *Handler) CreateUserPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
 
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/users", http.StatusSeeOther)
-		return
-	}
-
 	username := strings.TrimSpace(r.FormValue("username"))
 	email := strings.TrimSpace(r.FormValue("email"))
 	password := strings.TrimSpace(r.FormValue("password"))
@@ -190,11 +185,6 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.PathValue("user_id")
 	userID, _ := strconv.ParseInt(userIDStr, 10, 64)
 
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/users", http.StatusSeeOther)
-		return
-	}
-
 	email := strings.TrimSpace(r.FormValue("email"))
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
 	lastName := strings.TrimSpace(r.FormValue("last_name"))
@@ -271,11 +261,6 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // Admin-only. An admin cannot delete themselves.
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	admin := middleware.GetUser(r)
-
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/users", http.StatusSeeOther)
-		return
-	}
 
 	userIDStr := r.FormValue("user_id")
 	userID, _ := strconv.ParseInt(userIDStr, 10, 64)

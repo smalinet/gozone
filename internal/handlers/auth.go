@@ -40,11 +40,6 @@ func (h *Handler) LoginPage(w http.ResponseWriter, r *http.Request) {
 // On success, it generates a JWT stored in the "gozone_session" cookie and
 // redirects to /dashboard. On failure, redirects to /login?error=invalid_credentials.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 

@@ -74,11 +74,6 @@ func (h *Handler) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/profile/api-keys", http.StatusSeeOther)
-		return
-	}
-
 	description := strings.TrimSpace(r.FormValue("description"))
 	if description == "" {
 		description = "API Key"
@@ -125,11 +120,6 @@ func (h *Handler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
-
-	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/profile/api-keys", http.StatusSeeOther)
-		return
-	}
 
 	keyID := strings.TrimSpace(r.FormValue("key_id"))
 
