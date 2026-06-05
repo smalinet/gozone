@@ -41,7 +41,7 @@ func (h *Handler) HealthReady(w http.ResponseWriter, r *http.Request) {
 		resp.Checks["database"] = "ok"
 	}
 
-	if _, err := h.PDNS.GetServer(); err != nil {
+	if _, err := h.PDNS.GetServer(r.Context()); err != nil {
 		resp.Checks["powerdns"] = "error: " + err.Error()
 		resp.Status = "degraded"
 	} else {

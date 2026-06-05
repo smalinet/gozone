@@ -16,7 +16,7 @@ import (
 func (h *Handler) ListTSIGKeys(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 
-	keys, err := h.PDNS.ListTSIGKeys()
+	keys, err := h.PDNS.ListTSIGKeys(r.Context())
 	if err != nil {
 		h.renderError(w, r, "Failed to fetch TSIG keys: "+err.Error())
 		return
@@ -74,7 +74,7 @@ func (h *Handler) CreateTSIGKey(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tsigKey, err := h.PDNS.CreateTSIGKey(models.TSIGKey{
+	tsigKey, err := h.PDNS.CreateTSIGKey(r.Context(), models.TSIGKey{
 		Name:      name,
 		Algorithm: algorithm,
 		Key:       key,
@@ -100,7 +100,7 @@ func (h *Handler) EditTSIGKeyPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	keyID := r.PathValue("key_id")
 
-	tsigKey, err := h.PDNS.GetTSIGKey(keyID)
+	tsigKey, err := h.PDNS.GetTSIGKey(r.Context(), keyID)
 	if err != nil {
 		h.renderError(w, r, "TSIG key not found: "+err.Error())
 		return
@@ -144,7 +144,7 @@ func (h *Handler) UpdateTSIGKey(w http.ResponseWriter, r *http.Request) {
 		Type:      "TSIGKey",
 	}
 
-	if err := h.PDNS.UpdateTSIGKey(keyID, tsigKey); err != nil {
+	if err := h.PDNS.UpdateTSIGKey(r.Context(), keyID, tsigKey); err != nil {
 		h.renderError(w, r, "Failed to update TSIG key: "+err.Error())
 		return
 	}
@@ -174,7 +174,7 @@ func (h *Handler) DeleteTSIGKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.PDNS.DeleteTSIGKey(keyID); err != nil {
+	if err := h.PDNS.DeleteTSIGKey(r.Context(), keyID); err != nil {
 		h.renderError(w, r, "Failed to delete TSIG key: "+err.Error())
 		return
 	}

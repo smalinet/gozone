@@ -62,7 +62,7 @@ func apiUserID(r *http.Request) string {
 
 // APIListZones returns all PowerDNS zones as a JSON array (GET /api/v1/zones).
 func (h *Handler) APIListZones(w http.ResponseWriter, r *http.Request) {
-	zones, err := h.PDNS.ListZones()
+	zones, err := h.PDNS.ListZones(r.Context())
 	if err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeInternalError, "failed to list zones", err)
 		return
@@ -77,7 +77,7 @@ func (h *Handler) APIListZones(w http.ResponseWriter, r *http.Request) {
 // APIGetZone returns a single zone by zone_id as JSON (GET /api/v1/zones/{zone_id}).
 func (h *Handler) APIGetZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
-	zone, err := h.PDNS.GetZone(zoneID)
+	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusNotFound, ErrCodeZoneNotFound, "zone not found", err)
 		return
@@ -101,7 +101,7 @@ func (h *Handler) APICreateZone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	zone, err := h.PDNS.CreateZone(req)
+	zone, err := h.PDNS.CreateZone(r.Context(), req)
 	if err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeZoneCreateError, "failed to create zone", err)
 		return
@@ -112,7 +112,7 @@ func (h *Handler) APICreateZone(w http.ResponseWriter, r *http.Request) {
 // APIDeleteZone deletes a zone by zone_id (DELETE /api/v1/zones/{zone_id}).
 func (h *Handler) APIDeleteZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
-	if err := h.PDNS.DeleteZone(zoneID); err != nil {
+	if err := h.PDNS.DeleteZone(r.Context(), zoneID); err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeZoneDeleteError, "failed to delete zone", err)
 		return
 	}
@@ -124,7 +124,7 @@ func (h *Handler) APIDeleteZone(w http.ResponseWriter, r *http.Request) {
 // APIListRecords returns all records (RRSets) for a zone as JSON (GET /api/v1/zones/{zone_id}/records).
 func (h *Handler) APIListRecords(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
-	records, err := h.PDNS.ListRecords(zoneID)
+	records, err := h.PDNS.ListRecords(r.Context(), zoneID)
 	if err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeRecordNotFound, "failed to list records", err)
 		return
@@ -158,7 +158,7 @@ func (h *Handler) APICreateRecord(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.PDNS.CreateRecord(zoneID, rrset); err != nil {
+	if err := h.PDNS.CreateRecord(r.Context(), zoneID, rrset); err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeRecordError, "failed to create record", err)
 		return
 	}
@@ -188,7 +188,7 @@ func (h *Handler) APIUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.PDNS.UpdateRecord(zoneID, rrset); err != nil {
+	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeRecordError, "failed to update record", err)
 		return
 	}
@@ -215,7 +215,7 @@ func (h *Handler) APIDeleteRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.PDNS.DeleteRecord(zoneID, req.Name, req.Type); err != nil {
+	if err := h.PDNS.DeleteRecord(r.Context(), zoneID, req.Name, req.Type); err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeRecordError, "failed to delete record", err)
 		return
 	}
@@ -224,13 +224,13 @@ func (h *Handler) APIDeleteRecord(w http.ResponseWriter, r *http.Request) {
 
 // APIStats returns PowerDNS server statistics combined with the zone count (GET /api/v1/stats).
 func (h *Handler) APIStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := h.PDNS.GetStatistics()
+	stats, err := h.PDNS.GetStatistics(r.Context())
 	if err != nil {
 		h.writeAPIErrorWithCause(w, r, http.StatusInternalServerError, ErrCodeStatsError, "failed to get statistics", err)
 		return
 	}
 
-	zones, _ := h.PDNS.ListZones()
+	zones, _ := h.PDNS.ListZones(r.Context())
 	zones, _ = h.filterZonesForUser(r, zones)
 	zoneCount := 0
 	if zones != nil {

@@ -17,7 +17,7 @@ func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
 
-	zone, err := h.PDNS.GetZone(zoneID)
+	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
 		h.renderError(w, r, "Zone not found")
 		return
@@ -90,7 +90,7 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if err := h.PDNS.CreateRecord(zoneID, rrset); err != nil {
+	if err := h.PDNS.CreateRecord(r.Context(), zoneID, rrset); err != nil {
 		h.renderError(w, r, "Failed to create record: "+err.Error())
 		return
 	}
@@ -117,13 +117,13 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 	recordName := recordQuery.Get("name")
 	recordType := recordQuery.Get("type")
 
-	zone, err := h.PDNS.GetZone(zoneID)
+	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
 		h.renderError(w, r, "Zone not found")
 		return
 	}
 
-	records, err := h.PDNS.ListRecords(zoneID)
+	records, err := h.PDNS.ListRecords(r.Context(), zoneID)
 	if err != nil {
 		h.renderError(w, r, "Failed to fetch records")
 		return
@@ -198,7 +198,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if err := h.PDNS.UpdateRecord(zoneID, rrset); err != nil {
+	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
 		h.renderError(w, r, "Failed to update record: "+err.Error())
 		return
 	}
@@ -252,7 +252,7 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if err := h.PDNS.UpdateRecord(zoneID, rrset); err != nil {
+	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to update record"})
 		return
 	}
@@ -335,7 +335,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.PDNS.CreateRecords(zoneID, rrsets); err != nil {
+	if err := h.PDNS.CreateRecords(r.Context(), zoneID, rrsets); err != nil {
 		h.renderError(w, r, "Failed to create records: "+err.Error())
 		return
 	}
@@ -381,7 +381,7 @@ func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 	recordName := r.FormValue("name")
 	recordType := r.FormValue("type")
 
-	if err := h.PDNS.DeleteRecord(zoneID, recordName, recordType); err != nil {
+	if err := h.PDNS.DeleteRecord(r.Context(), zoneID, recordName, recordType); err != nil {
 		h.renderError(w, r, "Failed to delete record: "+err.Error())
 		return
 	}

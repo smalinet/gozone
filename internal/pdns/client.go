@@ -7,6 +7,7 @@ package pdns
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +51,7 @@ func NewClient(cfg *config.PowerDNSConfig) *Client {
 	}
 }
 
-func (c *Client) do(method, path string, body interface{}) ([]byte, int, error) {
+func (c *Client) do(ctx context.Context, method, path string, body interface{}) ([]byte, int, error) {
 	url := c.baseURL + path
 
 	var bodyReader io.Reader
@@ -62,7 +63,7 @@ func (c *Client) do(method, path string, body interface{}) ([]byte, int, error) 
 		bodyReader = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequest(method, url, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 	if err != nil {
 		return nil, 0, fmt.Errorf("create request: %w", err)
 	}
@@ -89,8 +90,8 @@ func (c *Client) do(method, path string, body interface{}) ([]byte, int, error) 
 }
 
 // GetServers returns the list of PowerDNS servers.
-func (c *Client) GetServers() ([]models.ServerInfo, error) {
-	body, status, err := c.do("GET", "/servers", nil)
+func (c *Client) GetServers(ctx context.Context) ([]models.ServerInfo, error) {
+	body, status, err := c.do(ctx, "GET", "/servers", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +107,8 @@ func (c *Client) GetServers() ([]models.ServerInfo, error) {
 }
 
 // GetServer returns a single server's info.
-func (c *Client) GetServer() (*models.ServerInfo, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID, nil)
+func (c *Client) GetServer(ctx context.Context) (*models.ServerInfo, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +124,8 @@ func (c *Client) GetServer() (*models.ServerInfo, error) {
 }
 
 // GetStatistics returns global PowerDNS statistics.
-func (c *Client) GetStatistics() ([]models.StatisticItem, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/statistics", nil)
+func (c *Client) GetStatistics(ctx context.Context) ([]models.StatisticItem, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/statistics", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +141,8 @@ func (c *Client) GetStatistics() ([]models.StatisticItem, error) {
 }
 
 // ListZones returns all zones.
-func (c *Client) ListZones() ([]models.Zone, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/zones", nil)
+func (c *Client) ListZones(ctx context.Context) ([]models.Zone, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,8 +161,8 @@ func (c *Client) ListZones() ([]models.Zone, error) {
 //
 // It avoids the N+1 sequential request pattern by fetching record lists
 // in parallel goroutines. Results preserve the original zone order.
-func (c *Client) ListZonesWithInfo() ([]models.ZoneWithInfo, error) {
-	zones, err := c.ListZones()
+func (c *Client) ListZonesWithInfo(ctx context.Context) ([]models.ZoneWithInfo, error) {
+	zones, err := c.ListZones(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ func (c *Client) ListZonesWithInfo() ([]models.ZoneWithInfo, error) {
 	for i, z := range zones {
 		go func(i int, zoneID string) {
 			defer wg.Done()
-			records, err := c.ListRecords(zoneID)
+			records, err := c.ListRecords(ctx, zoneID)
 			if err != nil {
 				results[i] = result{index: i, count: 0}
 				return
@@ -196,8 +197,8 @@ func (c *Client) ListZonesWithInfo() ([]models.ZoneWithInfo, error) {
 }
 
 // GetZone returns a specific zone.
-func (c *Client) GetZone(zoneID string) (*models.Zone, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/zones/"+zoneID, nil)
+func (c *Client) GetZone(ctx context.Context, zoneID string) (*models.Zone, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones/"+zoneID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,7 @@ func (c *Client) GetZone(zoneID string) (*models.Zone, error) {
 }
 
 // CreateZone creates a new zone.
-func (c *Client) CreateZone(req models.ZoneCreateRequest) (*models.Zone, error) {
+func (c *Client) CreateZone(ctx context.Context, req models.ZoneCreateRequest) (*models.Zone, error) {
 	if req.Kind == "" {
 		req.Kind = "Native"
 	}
@@ -221,7 +222,7 @@ func (c *Client) CreateZone(req models.ZoneCreateRequest) (*models.Zone, error) 
 		req.Nameservers = []string{}
 	}
 
-	body, status, err := c.do("POST", "/servers/"+c.serverID+"/zones", req)
+	body, status, err := c.do(ctx, "POST", "/servers/"+c.serverID+"/zones", req)
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +238,8 @@ func (c *Client) CreateZone(req models.ZoneCreateRequest) (*models.Zone, error) 
 }
 
 // DeleteZone deletes a zone.
-func (c *Client) DeleteZone(zoneID string) error {
-	_, status, err := c.do("DELETE", "/servers/"+c.serverID+"/zones/"+zoneID, nil)
+func (c *Client) DeleteZone(ctx context.Context, zoneID string) error {
+	_, status, err := c.do(ctx, "DELETE", "/servers/"+c.serverID+"/zones/"+zoneID, nil)
 	if err != nil {
 		return err
 	}
@@ -249,8 +250,8 @@ func (c *Client) DeleteZone(zoneID string) error {
 }
 
 // ListRecords returns all records (RRSets) for a zone.
-func (c *Client) ListRecords(zoneID string) ([]models.RRSet, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/zones/"+zoneID, nil)
+func (c *Client) ListRecords(ctx context.Context, zoneID string) ([]models.RRSet, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones/"+zoneID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -268,44 +269,44 @@ func (c *Client) ListRecords(zoneID string) ([]models.RRSet, error) {
 }
 
 // CreateRecord creates a new RRSet in a zone.
-func (c *Client) CreateRecord(zoneID string, rrset models.RRSet) error {
+func (c *Client) CreateRecord(ctx context.Context, zoneID string, rrset models.RRSet) error {
 	rrset.ChangeType = "REPLACE"
-	return c.patchZone(zoneID, []models.RRSet{rrset})
+	return c.patchZone(ctx, zoneID, []models.RRSet{rrset})
 }
 
 // UpdateRecord updates an existing RRSet.
-func (c *Client) UpdateRecord(zoneID string, rrset models.RRSet) error {
+func (c *Client) UpdateRecord(ctx context.Context, zoneID string, rrset models.RRSet) error {
 	rrset.ChangeType = "REPLACE"
-	return c.patchZone(zoneID, []models.RRSet{rrset})
+	return c.patchZone(ctx, zoneID, []models.RRSet{rrset})
 }
 
 // DeleteRecord deletes an RRSet from a zone.
-func (c *Client) DeleteRecord(zoneID string, name, recordType string) error {
+func (c *Client) DeleteRecord(ctx context.Context, zoneID string, name, recordType string) error {
 	rrset := models.RRSet{
 		Name:       name,
 		Type:       recordType,
 		ChangeType: "DELETE",
 	}
-	return c.patchZone(zoneID, []models.RRSet{rrset})
+	return c.patchZone(ctx, zoneID, []models.RRSet{rrset})
 }
 
 // CreateRecords creates multiple RRSets in a zone in a single PATCH call.
-func (c *Client) CreateRecords(zoneID string, rrsets []models.RRSet) error {
+func (c *Client) CreateRecords(ctx context.Context, zoneID string, rrsets []models.RRSet) error {
 	if len(rrsets) == 0 {
 		return nil
 	}
 	for i := range rrsets {
 		rrsets[i].ChangeType = "REPLACE"
 	}
-	return c.patchZone(zoneID, rrsets)
+	return c.patchZone(ctx, zoneID, rrsets)
 }
 
-func (c *Client) patchZone(zoneID string, rrsets []models.RRSet) error {
+func (c *Client) patchZone(ctx context.Context, zoneID string, rrsets []models.RRSet) error {
 	payload := map[string]interface{}{
 		"rrsets": rrsets,
 	}
 
-	_, status, err := c.do("PATCH", "/servers/"+c.serverID+"/zones/"+zoneID, payload)
+	_, status, err := c.do(ctx, "PATCH", "/servers/"+c.serverID+"/zones/"+zoneID, payload)
 	if err != nil {
 		return err
 	}
@@ -316,8 +317,8 @@ func (c *Client) patchZone(zoneID string, rrsets []models.RRSet) error {
 }
 
 // RectifyZone triggers DNSSEC rectification for a zone.
-func (c *Client) RectifyZone(zoneID string) error {
-	_, status, err := c.do("PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/rectify", nil)
+func (c *Client) RectifyZone(ctx context.Context, zoneID string) error {
+	_, status, err := c.do(ctx, "PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/rectify", nil)
 	if err != nil {
 		return err
 	}
@@ -328,8 +329,8 @@ func (c *Client) RectifyZone(zoneID string) error {
 }
 
 // NotifySlaves sends NOTIFY to slave servers for a zone.
-func (c *Client) NotifySlaves(zoneID string) error {
-	_, status, err := c.do("PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/notify", nil)
+func (c *Client) NotifySlaves(ctx context.Context, zoneID string) error {
+	_, status, err := c.do(ctx, "PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/notify", nil)
 	if err != nil {
 		return err
 	}
@@ -340,8 +341,8 @@ func (c *Client) NotifySlaves(zoneID string) error {
 }
 
 // GetMetadata returns all zone metadata entries.
-func (c *Client) GetMetadata(zoneID string) ([]models.Metadata, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata", nil)
+func (c *Client) GetMetadata(ctx context.Context, zoneID string) ([]models.Metadata, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -359,12 +360,12 @@ func (c *Client) GetMetadata(zoneID string) ([]models.Metadata, error) {
 // SetMetadata creates or replaces a zone metadata entry.
 // Uses PUT with the kind in the URL path for broader compatibility across
 // PowerDNS versions.
-func (c *Client) SetMetadata(zoneID string, meta models.Metadata) error {
+func (c *Client) SetMetadata(ctx context.Context, zoneID string, meta models.Metadata) error {
 	if meta.Metadata == nil {
 		meta.Metadata = []string{}
 	}
 	payload := map[string][]string{"metadata": meta.Metadata}
-	_, status, err := c.do("PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata/"+meta.Kind, payload)
+	_, status, err := c.do(ctx, "PUT", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata/"+meta.Kind, payload)
 	if err != nil {
 		return err
 	}
@@ -375,8 +376,8 @@ func (c *Client) SetMetadata(zoneID string, meta models.Metadata) error {
 }
 
 // DeleteMetadata removes a zone metadata entry by kind.
-func (c *Client) DeleteMetadata(zoneID string, kind string) error {
-	_, status, err := c.do("DELETE", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata/"+kind, nil)
+func (c *Client) DeleteMetadata(ctx context.Context, zoneID string, kind string) error {
+	_, status, err := c.do(ctx, "DELETE", "/servers/"+c.serverID+"/zones/"+zoneID+"/metadata/"+kind, nil)
 	if err != nil {
 		return err
 	}
@@ -392,8 +393,8 @@ func (c *Client) ServerID() string {
 }
 
 // ListTSIGKeys returns all TSIG keys for the server.
-func (c *Client) ListTSIGKeys() ([]models.TSIGKey, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/tsigkeys", nil)
+func (c *Client) ListTSIGKeys(ctx context.Context) ([]models.TSIGKey, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/tsigkeys", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -409,8 +410,8 @@ func (c *Client) ListTSIGKeys() ([]models.TSIGKey, error) {
 }
 
 // GetTSIGKey returns a single TSIG key.
-func (c *Client) GetTSIGKey(id string) (*models.TSIGKey, error) {
-	body, status, err := c.do("GET", "/servers/"+c.serverID+"/tsigkeys/"+id, nil)
+func (c *Client) GetTSIGKey(ctx context.Context, id string) (*models.TSIGKey, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/tsigkeys/"+id, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -426,8 +427,8 @@ func (c *Client) GetTSIGKey(id string) (*models.TSIGKey, error) {
 }
 
 // CreateTSIGKey creates a new TSIG key.
-func (c *Client) CreateTSIGKey(key models.TSIGKey) (*models.TSIGKey, error) {
-	body, status, err := c.do("POST", "/servers/"+c.serverID+"/tsigkeys", key)
+func (c *Client) CreateTSIGKey(ctx context.Context, key models.TSIGKey) (*models.TSIGKey, error) {
+	body, status, err := c.do(ctx, "POST", "/servers/"+c.serverID+"/tsigkeys", key)
 	if err != nil {
 		return nil, err
 	}
@@ -443,8 +444,8 @@ func (c *Client) CreateTSIGKey(key models.TSIGKey) (*models.TSIGKey, error) {
 }
 
 // UpdateTSIGKey updates an existing TSIG key.
-func (c *Client) UpdateTSIGKey(id string, key models.TSIGKey) error {
-	_, status, err := c.do("PUT", "/servers/"+c.serverID+"/tsigkeys/"+id, key)
+func (c *Client) UpdateTSIGKey(ctx context.Context, id string, key models.TSIGKey) error {
+	_, status, err := c.do(ctx, "PUT", "/servers/"+c.serverID+"/tsigkeys/"+id, key)
 	if err != nil {
 		return err
 	}
@@ -455,8 +456,8 @@ func (c *Client) UpdateTSIGKey(id string, key models.TSIGKey) error {
 }
 
 // DeleteTSIGKey deletes a TSIG key.
-func (c *Client) DeleteTSIGKey(id string) error {
-	_, status, err := c.do("DELETE", "/servers/"+c.serverID+"/tsigkeys/"+id, nil)
+func (c *Client) DeleteTSIGKey(ctx context.Context, id string) error {
+	_, status, err := c.do(ctx, "DELETE", "/servers/"+c.serverID+"/tsigkeys/"+id, nil)
 	if err != nil {
 		return err
 	}

@@ -124,7 +124,7 @@ func (h *Handler) EditGroupPage(w http.ResponseWriter, r *http.Request) {
 
 	allUsers, _ := h.getAllUsers()
 
-	allZones, _ := h.PDNS.ListZonesWithInfo()
+	allZones, _ := h.PDNS.ListZonesWithInfo(r.Context())
 
 	data := map[string]interface{}{
 		"Title":      g.Name + " - GoZone",
