@@ -110,20 +110,41 @@ func TestGetRecordTypes(t *testing.T) {
 
 func TestGetMetadataKinds(t *testing.T) {
 	kinds := GetMetadataKinds()
-	if len(kinds) == 0 {
-		t.Fatal("expected non-empty metadata kinds")
+
+	expected := []string{
+		"ALLOW-AXFR-FROM",
+		"ALLOW-DNSUPDATE-FROM",
+		"ALSO-NOTIFY",
+		"AXFR-MASTER-TSIG",
+		"AXFR-SOURCE",
+		"FORWARD-DNSSEC",
+		"GSS-ACCEPTOR-PRINCIPAL",
+		"GSS-ALLOW-AXFR-PRINCIPALS",
+		"IXFR",
+		"LUA-AXFR-SCRIPT",
+		"NOTIFY-DNSUPDATE",
+		"NSEC3NARROW",
+		"NSEC3PARAM",
+		"PRESIGNED",
+		"PUBLISH-CDNSKEY",
+		"PUBLISH-CDS",
+		"SOA-EDIT",
+		"SOA-EDIT-API",
+		"SOA-EDIT-DNSUPDATE",
+		"TSIG-ALLOW-AXFR",
+		"TSIG-ALLOW-DNSUPDATE",
 	}
 
-	expected := []string{"ALLOW-AXFR-FROM", "ALSO-NOTIFY", "PRESIGNED", "SOA-EDIT"}
+	if len(kinds) != len(expected) {
+		t.Errorf("expected %d metadata kinds, got %d", len(expected), len(kinds))
+	}
+
+	index := make(map[string]bool, len(kinds))
+	for _, k := range kinds {
+		index[k] = true
+	}
 	for _, want := range expected {
-		found := false
-		for _, got := range kinds {
-			if got == want {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !index[want] {
 			t.Errorf("expected metadata kind %s not found", want)
 		}
 	}
