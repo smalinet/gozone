@@ -46,7 +46,6 @@ considering the task complete. Use `// #nosec Gxxx` annotations only for intenti
 
 - **CGO must be enabled** for sqlite3 driver — cross-compilation needs `CGO_ENABLED=1` + C compiler
 - SQLite connection uses `SetMaxOpenConns(1)` — concurrent writes are serialized
-- No CI/CD config exists — `.github/` absent
 - No ORM — raw SQL queries throughout
 
 ## Commit convention
