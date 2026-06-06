@@ -467,11 +467,16 @@ func GetRecordTypes() []string {
 func GetMetadataKinds() []string {
 	return []string{
 		"ALLOW-AXFR-FROM",
+		"ALLOW-DNSUPDATE-FROM",
 		"ALSO-NOTIFY",
+		"AXFR-MASTER-TSIG",
 		"AXFR-SOURCE",
 		"FORWARD-DNSSEC",
+		"GSS-ACCEPTOR-PRINCIPAL",
 		"GSS-ALLOW-AXFR-PRINCIPALS",
+		"IXFR",
 		"LUA-AXFR-SCRIPT",
+		"NOTIFY-DNSUPDATE",
 		"NSEC3NARROW",
 		"NSEC3PARAM",
 		"PRESIGNED",
@@ -479,6 +484,8 @@ func GetMetadataKinds() []string {
 		"PUBLISH-CDS",
 		"SOA-EDIT",
 		"SOA-EDIT-API",
+		"SOA-EDIT-DNSUPDATE",
 		"TSIG-ALLOW-AXFR",
+		"TSIG-ALLOW-DNSUPDATE",
 	}
 }
