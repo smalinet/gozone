@@ -77,7 +77,7 @@ func (h *Handler) exportBind(w http.ResponseWriter, zone *models.Zone, records [
 		origin += "."
 	}
 
-	filename := fmt.Sprintf("%szone", strings.TrimSuffix(origin, "."))
+	filename := fmt.Sprintf("%s.zone", strings.TrimSuffix(origin, "."))
 	w.Header().Set("Content-Type", "text/plain")
 	// #nosec G601 — filename derived from PowerDNS zone name (server-controlled)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
