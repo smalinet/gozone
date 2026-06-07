@@ -18,10 +18,15 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
 
 ### Database Optimizations
 
-- [ ] **Cache frequently accessed data**
-  - Zone cache (TTL 1 min) with `sync.Map`
-  - PowerDNS statistics cache (TTL 30 sec)
-  - Invalidate cache on create/update/delete
+- [x] **Cache frequently accessed data**
+  - Zone cache (TTL 1 min) — `internal/pdns/cached.go`
+  - PowerDNS statistics cache (TTL 30 sec) — `internal/pdns/cached.go`
+  - TSIG keys cache (TTL 5 min) — `internal/pdns/cached.go`
+  - Server info cache (TTL 5 min) — `internal/pdns/cached.go`
+  - Invalidate zone/stat caches on CreateZone/DeleteZone
+  - Invalidate TSIG cache on CreateTSIGKey/UpdateTSIGKey/DeleteTSIGKey
+  - Generic TTL cache in `internal/cache/cache.go`
+  - Wired in `cmd/gozone/main.go` via `pdns.NewCachedClient()`
 
 ## DNSSEC
 

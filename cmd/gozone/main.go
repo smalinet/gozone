@@ -58,8 +58,9 @@ func main() {
 	}
 	defer db.Close()
 
-	// Create PowerDNS client
+	// Create PowerDNS client with read-through cache
 	pdnsClient := pdns.NewClient(&cfg.PowerDNS)
+	cachedClient := pdns.NewCachedClient(pdnsClient)
 
 	// Seed admin user if no users exist
 	if err := database.SeedAdminUser(db, cfg); err != nil {
@@ -70,7 +71,7 @@ func main() {
 	tmpl := parseTemplates()
 
 	// Create handler
-	h := handlers.New(db, pdnsClient, cfg, tmpl)
+	h := handlers.New(db, cachedClient, cfg, tmpl)
 
 	// Set up router
 	r := chi.NewRouter()

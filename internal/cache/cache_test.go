@@ -1,0 +1,111 @@
+package cache
+
+import (
+	"testing"
+	"time"
+)
+
+func TestCache_SetGet(t *testing.T) {
+	c := New[string](5 * time.Second)
+	c.Set("k1", "hello")
+
+	v, ok := c.Get("k1")
+	if !ok {
+		t.Fatal("expected key k1 to be present")
+	}
+	if v != "hello" {
+		t.Errorf("got %q, want hello", v)
+	}
+}
+
+func TestCache_GetMissing(t *testing.T) {
+	c := New[string](5 * time.Second)
+	_, ok := c.Get("nonexistent")
+	if ok {
+		t.Error("expected missing key to return false")
+	}
+}
+
+func TestCache_Expiry(t *testing.T) {
+	c := New[string](10 * time.Millisecond)
+	c.Set("k1", "hello")
+	time.Sleep(15 * time.Millisecond)
+
+	_, ok := c.Get("k1")
+	if ok {
+		t.Error("expected expired key to return false")
+	}
+}
+
+func TestCache_Delete(t *testing.T) {
+	c := New[string](5 * time.Second)
+	c.Set("k1", "hello")
+	c.Delete("k1")
+
+	_, ok := c.Get("k1")
+	if ok {
+		t.Error("expected deleted key to return false")
+	}
+}
+
+func TestCache_Clear(t *testing.T) {
+	c := New[int](5 * time.Second)
+	c.Set("a", 1)
+	c.Set("b", 2)
+	c.Set("c", 3)
+
+	if c.Len() != 3 {
+		t.Fatalf("expected 3 items, got %d", c.Len())
+	}
+
+	c.Clear()
+
+	if c.Len() != 0 {
+		t.Errorf("expected 0 items after clear, got %d", c.Len())
+	}
+}
+
+func TestCache_Concurrent(t *testing.T) {
+	c := New[int](5 * time.Second)
+	done := make(chan struct{})
+
+	go func() {
+		for i := 0; i < 1000; i++ {
+			c.Set("key", i)
+		}
+		done <- struct{}{}
+	}()
+
+	go func() {
+		for i := 0; i < 1000; i++ {
+			c.Get("key")
+		}
+		done <- struct{}{}
+	}()
+
+	<-done
+	<-done
+}
+
+func TestCache_GenericTypes(t *testing.T) {
+	intCache := New[int](5 * time.Second)
+	intCache.Set("n", 42)
+	v1, ok1 := intCache.Get("n")
+	if !ok1 || v1 != 42 {
+		t.Errorf("int cache: got %d, %v, want 42, true", v1, ok1)
+	}
+
+	strCache := New[string](5 * time.Second)
+	strCache.Set("s", "test")
+	v2, ok2 := strCache.Get("s")
+	if !ok2 || v2 != "test" {
+		t.Errorf("string cache: got %q, %v, want test, true", v2, ok2)
+	}
+
+	sliceCache := New[[]int](5 * time.Second)
+	sliceCache.Set("sl", []int{1, 2, 3})
+	v3, ok3 := sliceCache.Get("sl")
+	if !ok3 || len(v3) != 3 {
+		t.Errorf("slice cache: got %v, %v, want [1 2 3], true", v3, ok3)
+	}
+}
