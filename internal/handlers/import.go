@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/csv"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -43,10 +44,9 @@ func (h *Handler) ImportZone(w http.ResponseWriter, r *http.Request) {
 	var rrsets []models.RRSet
 	switch format {
 	case "bind":
-		data := make([]byte, header.Size)
-		_, err = file.Read(data)
-		if err != nil && err.Error() != "EOF" {
-			logger.Error("ImportZone: read failed", "zone", zoneID, "error", err)
+		data, readErr := io.ReadAll(io.LimitReader(file, 10<<20))
+		if readErr != nil {
+			logger.Error("ImportZone: read failed", "zone", zoneID, "error", readErr)
 			w.WriteHeader(http.StatusBadRequest)
 			h.renderError(w, r, "Failed to read uploaded file")
 			return
