@@ -248,13 +248,13 @@ gozone/
 │   │   ├── users.go              # User management
 │   │   ├── groups.go             # Zone group authorization
 │   │   ├── tsigkeys.go           # TSIG key management
-│   │   ├── templates.go           # Zone template management
+│   │   ├── templates.go          # Zone template management
 │   │   ├── api.go                # REST API handlers
 │   │   ├── api_keys.go           # API key management
 │   │   ├── auth.go               # Login/logout
 │   │   ├── dashboard.go          # Dashboard with PDNS stats
 │   │   └── health.go             # Health checks
-│   ├── middleware/                # HTTP middleware
+│   ├── middleware/               # HTTP middleware
 │   │   ├── auth.go               # JWT authentication
 │   │   ├── zoneauth.go           # Zone group authorization
 │   │   ├── security.go           # Security headers
