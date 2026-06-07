@@ -25,7 +25,7 @@ Write co-located `*_test.go` when adding code.
 
 ## Security Analysis
 
-After any code change, run `just gosec` (or `make gosec`) and fix every issue reported before
+After any code change, run `just fmt` (or `make fmt`) then `just gosec` (or `make gosec`) and fix every issue reported before
 considering the task complete. Use `// #nosec Gxxx` annotations only for intentional suppressions
 (e.g. HTTP response writes, timing side-channel mitigation) and document the reason inline.
 
