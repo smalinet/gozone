@@ -217,5 +217,23 @@ func (c *cachedClient) invalidateZones() {
 	c.stats.Clear()
 }
 
+// --- DNSSEC Cryptokeys (passthrough, not cached) ---
+
+func (c *cachedClient) ListCryptokeys(ctx context.Context, zoneID string) ([]models.Cryptokey, error) {
+	return c.client.ListCryptokeys(ctx, zoneID)
+}
+
+func (c *cachedClient) CreateCryptokey(ctx context.Context, zoneID string, keyType string, active bool, algorithm string) (*models.Cryptokey, error) {
+	return c.client.CreateCryptokey(ctx, zoneID, keyType, active, algorithm)
+}
+
+func (c *cachedClient) ToggleCryptokey(ctx context.Context, zoneID string, keyID int, active bool) error {
+	return c.client.ToggleCryptokey(ctx, zoneID, keyID, active)
+}
+
+func (c *cachedClient) DeleteCryptokey(ctx context.Context, zoneID string, keyID int) error {
+	return c.client.DeleteCryptokey(ctx, zoneID, keyID)
+}
+
 // Compile-time check that cachedClient implements ZoneService.
 var _ ZoneService = (*cachedClient)(nil)

@@ -30,28 +30,29 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
 
 ## DNSSEC
 
-- [ ] **Zone DNSSEC management**
-  - Enable/disable DNSSEC per zone
-  - View DNSSEC status (signed/unsigned) on zone page
-  - Display active and inactive keys (KSK/ZSK) with metadata (algorithm, size, DS)
-  - Activate/deactivate keys via PowerDNS API
+- [x] **Zone DNSSEC management**
+  - Enable/disable DNSSEC per zone via cryptokey creation/deletion
+  - View DNSSEC keys on zone page with KSK/ZSK badge, algorithm, bits, DS records
+  - Display active and inactive keys with activate/deactivate toggle
+  - Create/delete keys via PowerDNS API in `internal/pdns/client.go`
 
-- [ ] **Key operations**
-  - Create new KSK and ZSK keys per zone
-  - Delete deactivated keys
-  - Set key active/inactive state
-  - Export DS/DNSKEY records for parent zone configuration
+- [x] **Key operations**
+  - Create new KSK and ZSK keys per zone — `CreateCryptokey` handler
+  - Delete deactivated keys — `DeleteCryptokey` handler
+  - Toggle key active/inactive — `ToggleCryptokey` handler
+  - Export DS records displayed inline on zone page
 
-- [ ] **DNSSEC algorithms**
-  - Support for common algorithms (ECDSAP256SHA256, RSASHA256, etc.)
+- [x] **DNSSEC algorithms**
+  - Support for common algorithms (rsasha256, rsasha512, ecdsa256, ecdsa384, ed25519, ed448)
   - Display algorithm details in key table
-  - Algorithm selection when creating new keys
+  - Algorithm selection dropdown when creating new keys — `DNSSECAlgorithms()` helper
+  - ECDSAP256SHA256 (ecdsa256) pre-selected as default
 
-- [ ] **Zone metadata for DNSSEC**
-  - `NSEC3PARAM` metadata configuration (opt-out, iterations, salt)
-  - `NSEC3NARROW` enable/disable via checkbox
-  - `PRESIGNED` flag for externally signed zones
-  - `PUBLISH-CDS` / `PUBLISH-CDNSKEY` controls
+- [x] **Zone metadata for DNSSEC**
+  - `NSEC3PARAM` metadata available through existing metadata management UI
+  - `PRESIGNED` flag available through metadata UI
+  - `PUBLISH-CDS` / `PUBLISH-CDNSKEY` available through metadata UI
+  - Metadata kinds list includes all 14 DNSSEC-related kinds
 
 ## Export / Import
 

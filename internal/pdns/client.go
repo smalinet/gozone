@@ -452,3 +452,75 @@ func (c *Client) DeleteTSIGKey(ctx context.Context, id string) error {
 	}
 	return nil
 }
+
+// --- DNSSEC Cryptokeys ---
+
+type createCryptoRequest struct {
+	KeyType   string `json:"keytype"`
+	Active    bool   `json:"active"`
+	Algorithm string `json:"algorithm"`
+}
+
+// ListCryptokeys returns all DNSSEC keys for a zone.
+func (c *Client) ListCryptokeys(ctx context.Context, zoneID string) ([]models.Cryptokey, error) {
+	body, status, err := c.do(ctx, "GET", "/servers/"+c.serverID+"/zones/"+zoneID+"/cryptokeys", nil)
+	if err != nil {
+		return nil, err
+	}
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
+	}
+
+	var keys []models.Cryptokey
+	if err := json.Unmarshal(body, &keys); err != nil {
+		return nil, fmt.Errorf("unmarshal cryptokeys: %w", err)
+	}
+	return keys, nil
+}
+
+// CreateCryptokey creates a new DNSSEC key for a zone.
+func (c *Client) CreateCryptokey(ctx context.Context, zoneID string, keyType string, active bool, algorithm string) (*models.Cryptokey, error) {
+	req := createCryptoRequest{
+		KeyType:   keyType,
+		Active:    active,
+		Algorithm: algorithm,
+	}
+	body, status, err := c.do(ctx, "POST", "/servers/"+c.serverID+"/zones/"+zoneID+"/cryptokeys", req)
+	if err != nil {
+		return nil, err
+	}
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
+	}
+
+	var key models.Cryptokey
+	if err := json.Unmarshal(body, &key); err != nil {
+		return nil, fmt.Errorf("unmarshal cryptokey: %w", err)
+	}
+	return &key, nil
+}
+
+// ToggleCryptokey activates or deactivates a DNSSEC key.
+func (c *Client) ToggleCryptokey(ctx context.Context, zoneID string, keyID int, active bool) error {
+	payload := map[string]interface{}{"active": active}
+	_, status, err := c.do(ctx, "PUT", fmt.Sprintf("/servers/%s/zones/%s/cryptokeys/%d", c.serverID, zoneID, keyID), payload)
+	if err != nil {
+		return err
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("unexpected status %d", status)
+	}
+	return nil
+}
+
+// DeleteCryptokey deletes a DNSSEC key from a zone.
+func (c *Client) DeleteCryptokey(ctx context.Context, zoneID string, keyID int) error {
+	_, status, err := c.do(ctx, "DELETE", fmt.Sprintf("/servers/%s/zones/%s/cryptokeys/%d", c.serverID, zoneID, keyID), nil)
+	if err != nil {
+		return err
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("unexpected status %d", status)
+	}
+	return nil
+}

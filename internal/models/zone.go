@@ -115,3 +115,35 @@ type TSIGKey struct {
 	Key       string `json:"key"`
 	Type      string `json:"type"`
 }
+
+// Cryptokey represents a DNSSEC cryptographic key in PowerDNS.
+type Cryptokey struct {
+	Type       string   `json:"type"`
+	ID         int      `json:"id"`
+	KeyType    string   `json:"keytype"`
+	Active     bool     `json:"active"`
+	Published  bool     `json:"published"`
+	DNSKEY     string   `json:"dnskey"`
+	DS         []string `json:"ds"`
+	PrivateKey string   `json:"privatekey"`
+	Algorithm  string   `json:"algorithm"`
+	Bits       int      `json:"bits"`
+}
+
+// DNSSECAlgorithm describes a supported DNSSEC signing algorithm.
+type DNSSECAlgorithm struct {
+	Name        string
+	Description string
+}
+
+// DNSSECAlgorithms returns the list of algorithms supported by PowerDNS.
+func DNSSECAlgorithms() []DNSSECAlgorithm {
+	return []DNSSECAlgorithm{
+		{"rsasha256", "RSA/SHA-256 (8)"},
+		{"rsasha512", "RSA/SHA-512 (10)"},
+		{"ecdsa256", "ECDSA P-256 SHA-256 (13)"},
+		{"ecdsa384", "ECDSA P-384 SHA-384 (14)"},
+		{"ed25519", "Ed25519 (15)"},
+		{"ed448", "Ed448 (16)"},
+	}
+}

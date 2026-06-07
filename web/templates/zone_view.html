@@ -216,6 +216,77 @@
 
 {{if .IsAdmin}}
 <div class="card" style="margin-top:2rem">
+    <h3>DNSSEC</h3>
+
+    {{if .Cryptokeys}}
+    <div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr><th>ID</th><th>Type</th><th>Algorithm</th><th>Bits</th><th>Active</th><th>DS</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {{$zoneID := .Zone.ID}}
+            {{range .Cryptokeys}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td><span class="badge badge-type-{{.KeyType}}">{{.KeyType}}</span></td>
+                <td>{{.Algorithm}}</td>
+                <td>{{.Bits}}</td>
+                <td>{{if .Active}}<span class="badge badge-active">Active</span>{{else}}<span class="badge badge-disabled">Inactive</span>{{end}}</td>
+                <td>
+                    {{range .DS}}
+                    <code style="display:block;margin-bottom:0.2rem;font-size:0.75rem;word-break:break-all">{{.}}</code>
+                    {{end}}
+                </td>
+                <td class="actions-cell">
+                    <form method="POST" action="/zones/{{$zoneID}}/cryptokeys/{{.ID}}/toggle" style="display:inline">
+                        <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="active" value="{{if .Active}}false{{else}}true{{end}}">
+                        <button type="submit" class="btn btn-sm {{if .Active}}btn-secondary{{else}}btn-primary{{end}}">{{if .Active}}Deactivate{{else}}Activate{{end}}</button>
+                    </form>
+                    <form method="POST" action="/zones/{{$zoneID}}/cryptokeys/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete key {{.ID}}?')">
+                        <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFToken}}">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    </div>
+    {{else}}
+    <p class="empty-state" style="text-align:left">No DNSSEC keys for this zone.</p>
+    {{end}}
+
+    <details style="margin-top:1rem">
+        <summary style="cursor:pointer;font-weight:600">Create Key</summary>
+        <form method="POST" action="/zones/{{.Zone.ID}}/cryptokeys/create" style="margin-top:0.75rem">
+            <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
+            <div class="form-row">
+                <div class="form-group" style="flex:1">
+                    <label for="crypto_keytype">Key Type</label>
+                    <select name="keytype" id="crypto_keytype" class="form-control">
+                        <option value="ksk">KSK (Key Signing Key)</option>
+                        <option value="zsk">ZSK (Zone Signing Key)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label for="crypto_algo">Algorithm</label>
+                    <select name="algorithm" id="crypto_algo" class="form-control">
+                        {{range $.DNSSECAlgos}}
+                        <option value="{{.Name}}" {{if eq .Name "ecdsa256"}}selected{{end}}>{{.Description}}</option>
+                        {{end}}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Key</button>
+        </form>
+    </details>
+</div>
+{{end}}
+
+{{if .IsAdmin}}
+<div class="card" style="margin-top:2rem">
     <h3>Danger Zone</h3>
     <form method="POST" action="/zones/delete" onsubmit="return confirm('Delete zone {{.Zone.Name}}? This action cannot be undone.')">
         <input type="hidden" name="gorilla.csrf.Token" value="{{ .CSRFToken }}">

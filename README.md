@@ -152,13 +152,18 @@ Shows PowerDNS server status (connected/unreachable, version, daemon type), zone
 
 Each zone page displays:
 - **Records table** with color-coded type badges (A=blue, AAAA=violet, CNAME=orange, MX=pink, NS=cyan, etc.)
+- **DNSSEC management** — view, create, activate/deactivate, and delete DNSSEC keys (KSK/ZSK) with algorithm selection and DS record display
 - **Zone metadata** (admin only) — manage ALLOW-AXFR-FROM, ALSO-NOTIFY, SOA-EDIT, NSEC3PARAM, PRESIGNED, and other PowerDNS metadata kinds
 - **Activity logs** — history of changes to the zone
-- **Danger zone** (admin only) — delete zone, rectify, notify
+- **Danger zone** (admin only) — delete zone, notify
 
 ### TSIG Keys
 
 Manage TSIG keys for secured DNS operations (zone transfers, dynamic updates). Available to admin users under the TSIG Keys menu. Supports hmac-md5, hmac-sha1, hmac-sha256, and hmac-sha512 algorithms.
+
+### DNSSEC
+
+Admin users can manage DNSSEC for each zone directly from the zone view page. Create KSK (Key Signing Key) and ZSK (Zone Signing Key) pairs with selectable algorithms (RSA/SHA-256, RSA/SHA-512, ECDSA P-256, ECDSA P-384, Ed25519, Ed448). Activate/deactivate keys, view DS records for parent zone configuration, and delete deactivated keys. All operations are logged in the activity feed.
 
 ### Zone Groups
 
@@ -249,6 +254,7 @@ gozone/
 │   │   ├── groups.go             # Zone group authorization
 │   │   ├── tsigkeys.go           # TSIG key management
 │   │   ├── templates.go          # Zone template management
+│   │   ├── dnssec.go             # DNSSEC key management
 │   │   ├── api.go                # REST API handlers
 │   │   ├── api_keys.go           # API key management
 │   │   ├── auth.go               # Login/logout

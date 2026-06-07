@@ -236,11 +236,13 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	recordsCh := make(chan recordsRes, 1)
 	metadataCh := make(chan []models.Metadata, 1)
 	serverCh := make(chan *models.ServerInfo, 1)
+	cryptoCh := make(chan []models.Cryptokey, 1)
 
 	go func() { z, err := h.PDNS.GetZone(r.Context(), zoneID); zoneCh <- zoneRes{z, err} }()
 	go func() { recs, err := h.PDNS.ListRecords(r.Context(), zoneID); recordsCh <- recordsRes{recs, err} }()
 	go func() { m, _ := h.PDNS.GetMetadata(r.Context(), zoneID); metadataCh <- m }()
 	go func() { s, _ := h.PDNS.GetServer(r.Context()); serverCh <- s }()
+	go func() { ck, _ := h.PDNS.ListCryptokeys(r.Context(), zoneID); cryptoCh <- ck }()
 
 	zr := <-zoneCh
 	if zr.err != nil {
@@ -258,6 +260,7 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 
 	metadata := <-metadataCh
 	srv := <-serverCh
+	cryptokeys := <-cryptoCh
 
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
@@ -312,6 +315,8 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		"IsAdmin":        user.IsAdmin(),
 		"Templates":      templates,
 		"TemplateVars":   TemplateVariables,
+		"Cryptokeys":     cryptokeys,
+		"DNSSECAlgos":    GetDNSSECAlgorithms(),
 	}
 	h.render(w, r, "zone_view.html", data)
 }

@@ -46,6 +46,12 @@ type ZoneService interface {
 	CreateTSIGKey(ctx context.Context, key models.TSIGKey) (*models.TSIGKey, error)
 	UpdateTSIGKey(ctx context.Context, id string, key models.TSIGKey) error
 	DeleteTSIGKey(ctx context.Context, id string) error
+
+	// DNSSEC Cryptokeys
+	ListCryptokeys(ctx context.Context, zoneID string) ([]models.Cryptokey, error)
+	CreateCryptokey(ctx context.Context, zoneID string, keyType string, active bool, algorithm string) (*models.Cryptokey, error)
+	ToggleCryptokey(ctx context.Context, zoneID string, keyID int, active bool) error
+	DeleteCryptokey(ctx context.Context, zoneID string, keyID int) error
 }
 
 // Compile-time check that Client implements ZoneService.
