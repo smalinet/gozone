@@ -2,146 +2,48 @@
 
 Remaining tasks to improve the security, quality, and performance of GoZone.
 
-## Performance
+## OpenID Connect / OAuth2
 
-### HTTP Optimizations
+- [ ] **OAuth2 / OIDC provider configuration**
+  - Configurable provider URL, client ID, client secret via `config.yaml` + env vars (`GOZONE_OIDC_*`)
+  - Well-known discovery endpoint (`/.well-known/openid-configuration`) for automatic metadata retrieval
+  - Support for standard providers: Google, GitHub, GitLab, Keycloak, Authentik, Azure AD
 
-- [x] **Configure connection pooling for PowerDNS client** (`internal/pdns/client.go`)
-  ```go
-  Transport: &http.Transport{
-      MaxIdleConns:        100,
-      MaxIdleConnsPerHost: 10,
-      IdleConnTimeout:     90 * time.Second,
-      DisableKeepAlives:   false,
-  }
-  ```
+- [ ] **Login flow**
+  - "Sign in with SSO" button on login page, redirects to provider authorization endpoint
+  - Authorization code flow with PKCE (`S256`) for public clients
+  - State parameter with HMAC signature to prevent CSRF
+  - Nonce parameter for OpenID Connect ID token replay protection
+  - Redirect URI validation against configured base URL
 
-### Database Optimizations
+- [ ] **User mapping and provisioning**
+  - Map OIDC claims to GoZone user attributes: `sub` → external ID, `email` → email, `preferred_username` → username, `name` → display name
+  - Just-in-time (JIT) user provisioning: auto-create user on first login if allowed by config
+  - Role mapping: map provider roles/groups/realm_access claims to GoZone roles (admin/user)
+  - Group mapping: map provider groups/teams to GoZone zone groups
+  - Existing local user linking by email match (prompt to connect accounts)
 
-- [x] **Cache frequently accessed data**
-  - Zone cache (TTL 1 min) — `internal/pdns/cached.go`
-  - PowerDNS statistics cache (TTL 30 sec) — `internal/pdns/cached.go`
-  - TSIG keys cache (TTL 5 min) — `internal/pdns/cached.go`
-  - Server info cache (TTL 5 min) — `internal/pdns/cached.go`
-  - Invalidate zone/stat caches on CreateZone/DeleteZone
-  - Invalidate TSIG cache on CreateTSIGKey/UpdateTSIGKey/DeleteTSIGKey
-  - Generic TTL cache in `internal/cache/cache.go`
-  - Wired in `cmd/gozone/main.go` via `pdns.NewCachedClient()`
+- [ ] **Session management**
+  - JWT session issued after successful OIDC authentication, same as local login
+  - Refresh token support with configurable TTL
+  - Idle session timeout with forced re-authentication
+  - Single logout (RP-Initiated Logout) with `end_session_endpoint` when available
 
-## DNSSEC
+- [ ] **Configuration options**
+  - `oidc.enabled` — master switch for SSO
+  - `oidc.allow_local_login` — keep local username/password login alongside SSO
+  - `oidc.auto_provision` — create users on first SSO login
+  - `oidc.default_role` — role assigned to auto-provisioned users
+  - `oidc.scopes` — requested scopes (openid, profile, email, groups)
+  - `oidc.claim_mappings` — custom claim-to-attribute mapping
 
-- [x] **Zone DNSSEC management**
-  - Enable/disable DNSSEC per zone via cryptokey creation/deletion
-  - View DNSSEC keys on zone page with KSK/ZSK badge, algorithm, bits, DS records
-  - Display active and inactive keys with activate/deactivate toggle
-  - Create/delete keys via PowerDNS API in `internal/pdns/client.go`
+- [ ] **Security**
+  - Token signature verification with JWKS endpoint (`id_token_signing_alg_values_supported`)
+  - Claims validation: `iss`, `aud`, `exp`, `iat`, `nbf`, `nonce`
+  - JWKS caching with configurable TTL (default 1 hour)
+  - Rate limiting on callback endpoint to prevent brute-force state guessing
 
-- [x] **Key operations**
-  - Create new KSK and ZSK keys per zone — `CreateCryptokey` handler
-  - Delete deactivated keys — `DeleteCryptokey` handler
-  - Toggle key active/inactive — `ToggleCryptokey` handler
-  - Export DS records displayed inline on zone page
-
-- [x] **DNSSEC algorithms**
-  - Support for common algorithms (rsasha256, rsasha512, ecdsa256, ecdsa384, ed25519, ed448)
-  - Display algorithm details in key table
-  - Algorithm selection dropdown when creating new keys — `DNSSECAlgorithms()` helper
-  - ECDSAP256SHA256 (ecdsa256) pre-selected as default
-
-- [x] **Zone metadata for DNSSEC**
-   - `NSEC3PARAM` metadata available through existing metadata management UI
-   - `PRESIGNED` flag available through metadata UI
-   - `PUBLISH-CDS` / `PUBLISH-CDNSKEY` available through metadata UI
-   - Metadata kinds list includes all 14 DNSSEC-related kinds
-
-- [x] **Auto-rectification after key operations**
-   - `RectifyZone` called automatically after `CreateCryptokey`, `ToggleCryptokey`, and `DeleteCryptokey`
-   - Rectify button in zone view header (admin-only)
-   - Handles rectify failure with error page (no silent inconsistency)
-
-- [x] **Per-zone cache invalidation**
-   - `ClearZoneCache` handler invalidates zone list and zone info caches
-   - Available to any authenticated user with group access to the zone
-   - "Clear Cache" button in zone view header
-   - `InvalidateZoneCache` added to `ZoneService` interface
-   - No-op on bare Client, clears `zoneList` + `zoneInfo` on `cachedClient`
-
-## Export / Import
-
-- [x] **Zone export in BIND format**
-  - Generate RFC 1035-compliant zone file from PowerDNS records — `ExportZone` handler in `internal/handlers/export.go`
-  - Include `$ORIGIN`, `$TTL`, and SOA record header
-  - Support all record types (A, AAAA, CNAME, MX, NS, PTR, SOA, SRV, TXT, etc.)
-  - Download as `.zone` file via button on zone view page
-  - Server-side generation in Go (no external tools)
-  - `GET /zones/{zone_id}/export?format=bind`
-
-- [x] **Zone export in CSV format**
-  - Columns: name, type, content, ttl, priority, disabled
-  - `GET /zones/{zone_id}/export?format=csv`
-  - `Content-Type: text/csv` with Content-Disposition attachment
-
-- [x] **Import zone from BIND zone file**
-  - Parse RFC 1035 zone file with `$ORIGIN`, `$TTL`, `$INCLUDE` directives via `parseBindZone()` in `internal/handlers/import.go`
-  - Handle comments (`;` to EOL), parentheses for multi-line records, relative/absolute names, `@` origin expansion
-  - Quoted TXT records preserved
-  - File upload form on zone view page
-  - Batch-create parsed records via `CreateRecords` PDNS API
-  - `POST /zones/{zone_id}/import`
-
-- [x] **Import zone from CSV file**
-  - Parse CSV with header row: name, type, content, ttl, priority, disabled
-  - Automatic trailing dot normalization on record names
-  - Group records by (name, type) into RRSets before creating
-  - `POST /zones/{zone_id}/import`
-
-- [x] **Export / Import API endpoints**
-  - Export available to all authenticated users with zone access
-  - Import restricted to users with zone access (group authorization)
-  - Respect zone-level authorization via `CheckZoneAccess` middleware
-  - Set appropriate `Content-Type` headers (`text/plain` for BIND, `text/csv` for CSV)
-  - File upload limited to 10MB with `ParseMultipartForm`
-
-## Zone Templates
-
-- [x] **Define reusable zone templates**
-  - Pre-populated record sets for common zone types (standard, mail, web, redirect)
-  - Custom templates with user-defined records
-  - Template variables (e.g. `{{IP}}`, `{{MX_HOST}}`, `{{TTL}}`, `{{ZONE}}`)
-  - Template storage in local database tables `zone_templates` + `zone_template_records`
-  - Built-in templates seeded on startup: `standard`, `mail`, `web`, `redirect`
-
-- [x] **Template management UI**
-  - CRUD pages for templates (list, create, edit, delete) at `/templates`
-  - Record editor within template edit page (add/delete records)
-  - Template variables reference table on edit page
-  - Template list shows built-in vs custom templates
-
-- [x] **Apply template on zone creation**
-  - Select template from dropdown on zone create page
-  - Replace variables with user-provided values (IP, IP6, MX_HOST, etc.)
-  - Batch-create all template records via PowerDNS API after zone creation
-  - Auto-populate `{{ZONE}}` variable with the created zone name
-
-- [x] **Apply template to existing zone**
-  - "Apply Template" dropdown on zone view page
-  - Same variable substitution as creation flow
-  - Records are added to the existing zone via `POST /zones/{zone_id}/apply-template`
-  - Route protected by zone-level group authorization
-
-- [x] **Built-in templates**
-  - `standard` — SOA + NS records
-  - `mail` — SOA + NS + MX + SPF + DKIM placeholders
-  - `web` — SOA + NS + A/AAAA + CNAME www
-  - `redirect` — SOA + NS + A + URL redirect record
-
-## Code Quality
-
-### Cleanup
-
-- [ ] **Add TODO/FIXME comments** for known limitations
-
-### Monitoring and Observability
+## Monitoring and Observability
 
 - [ ] **Add Prometheus metrics**
   - Request count per endpoint
@@ -155,6 +57,29 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
   - Trace PowerDNS calls
   - Trace SQL queries
   - Export to Jaeger or Zipkin
+
+### Password Enforcement
+
+- [ ] **Password policy configuration**
+  - Minimum length (default 8)
+  - Require uppercase, lowercase, digits, special characters
+  - Password history (prevent reuse of last N passwords)
+  - Configurable via `config.yaml` + env vars (`GOZONE_PASSWORD_*`)
+
+- [ ] **Password expiration**
+  - Maximum password age (default 90 days)
+  - Warn user N days before expiry
+  - Force change on next login after expiry
+  - Admin reset triggers forced change
+
+- [ ] **Account lockout**
+  - Lock account after N failed login attempts (default 5)
+  - Lockout duration (default 15 minutes) or admin unlock
+  - IP-based rate limiting on login endpoint
+
+- [ ] **Password hashing**
+  - Configurable bcrypt cost (currently hardcoded, make env-configurable)
+  - Consider Argon2id support as future alternative
 
 ## Performance Targets
 
@@ -180,3 +105,6 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
 - [PowerDNS API Documentation](https://doc.powerdns.com/authoritative/http-api/)
 - [RFC 1035 - Domain Names](https://tools.ietf.org/html/rfc1035)
 - [PowerDNS DNSSEC Guide](https://doc.powerdns.com/authoritative/dnssec/)
+- [RFC 6749 - OAuth 2.0](https://tools.ietf.org/html/rfc6749)
+- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
+- [RFC 7636 - PKCE](https://tools.ietf.org/html/rfc7636)
