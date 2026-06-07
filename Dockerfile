@@ -29,9 +29,4 @@ USER nonroot
 
 EXPOSE 8080
 
-ENV GOZONE_ADMIN_PASSWORD=""
-ENV GOZONE_SECRET_KEY=""
-ENV GOZONE_PDNS_API_URL=""
-ENV GOZONE_PDNS_API_KEY=""
-
 CMD ["/gozone", "-config", "config.yaml"]
