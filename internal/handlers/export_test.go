@@ -1,0 +1,214 @@
+package handlers
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/babykart/gozone/internal/models"
+	"github.com/babykart/gozone/internal/testutil"
+)
+
+func testExportPDNS() testutil.PDNSHandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		path := r.URL.Path
+
+		if strings.Contains(r.URL.RawQuery, "rrsets") {
+			w.Write([]byte(`[{"name":"example.com.","id":"example.com.","kind":"Native","serial":2024010100}]`))
+			return
+		}
+
+		if strings.Contains(path, "/zones/") && !strings.Contains(path, "/export") && !strings.Contains(path, "/import") && !strings.Contains(path, "/records") && !strings.Contains(path, "/cryptokeys") && !strings.Contains(path, "/metadata") {
+			if r.Method == http.MethodGet {
+				w.Write([]byte(`{"id":"example.com.","name":"example.com.","kind":"Native","serial":2024010100,"rrsets":[{"name":"example.com.","type":"SOA","ttl":3600,"records":[{"content":"ns1.example.com. hostmaster.example.com. 2024010100 3600 900 1209600 3600","disabled":false}]},{"name":"example.com.","type":"NS","ttl":3600,"records":[{"content":"ns1.example.com.","disabled":false}]},{"name":"www.example.com.","type":"A","ttl":3600,"records":[{"content":"192.0.2.1","disabled":false}]},{"name":"example.com.","type":"MX","ttl":3600,"records":[{"content":"mail.example.com.","disabled":false,"priority":10}]}]}`))
+				return
+			}
+		}
+
+		w.Write([]byte(`[]`))
+	}
+}
+
+func TestExportZone_BIND(t *testing.T) {
+	h, srv := newTestHandlerWithPDNS(t, testExportPDNS())
+	defer srv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com./export?format=bind", nil)
+	r.SetPathValue("zone_id", "example.com.")
+	r = withUserContext(r, &models.User{ID: 1, Username: "test", Role: "admin"})
+	h.ExportZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+
+	if !strings.HasPrefix(body, "$ORIGIN example.com.") {
+		t.Errorf("expected $ORIGIN, got: %s", body[:60])
+	}
+	if !strings.Contains(body, "$TTL") {
+		t.Errorf("expected $TTL, got: %s", body[:100])
+	}
+	if !strings.Contains(body, "IN SOA") {
+		t.Errorf("expected SOA record, got: %s", body)
+	}
+	if !strings.Contains(body, "IN NS") {
+		t.Errorf("expected NS record, got: %s", body)
+	}
+	if !strings.Contains(body, "IN A") {
+		t.Errorf("expected A record, got: %s", body)
+	}
+	if !strings.Contains(body, "IN MX") {
+		t.Errorf("expected MX record, got: %s", body)
+	}
+	if !strings.Contains(body, "10 mail.example.com.") {
+		t.Errorf("expected MX priority+content, got: %s", body)
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if !strings.Contains(ct, "text/plain") {
+		t.Errorf("expected text/plain Content-Type, got: %s", ct)
+	}
+	cd := w.Header().Get("Content-Disposition")
+	if !strings.Contains(cd, "attachment") {
+		t.Errorf("expected Content-Disposition attachment, got: %s", cd)
+	}
+}
+
+func TestExportZone_CSV(t *testing.T) {
+	h, srv := newTestHandlerWithPDNS(t, testExportPDNS())
+	defer srv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com./export?format=csv", nil)
+	r.SetPathValue("zone_id", "example.com.")
+	r = withUserContext(r, &models.User{ID: 1, Username: "test", Role: "admin"})
+	h.ExportZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+
+	if !strings.Contains(body, "name,type,content,ttl,priority,disabled") {
+		t.Errorf("expected CSV header, got: %s", body)
+	}
+	if !strings.Contains(body, "SOA") {
+		t.Errorf("expected SOA in CSV, got: %s", body)
+	}
+	if !strings.Contains(body, "192.0.2.1") {
+		t.Errorf("expected A record content in CSV, got: %s", body)
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if !strings.Contains(ct, "text/csv") {
+		t.Errorf("expected text/csv Content-Type, got: %s", ct)
+	}
+}
+
+func TestExportZone_InvalidFormat(t *testing.T) {
+	h, srv := newTestHandlerWithPDNS(t, testExportPDNS())
+	defer srv.Close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com./export?format=json", nil)
+	r.SetPathValue("zone_id", "example.com.")
+	r = withUserContext(r, &models.User{ID: 1, Username: "test", Role: "admin"})
+	h.ExportZone(w, r)
+
+	if !strings.Contains(w.Body.String(), "Invalid format") {
+		t.Errorf("expected error message, got: %s", w.Body.String())
+	}
+}
+
+func TestRelativeBindName(t *testing.T) {
+	tests := []struct {
+		name, origin, expected string
+	}{
+		{"example.com.", "example.com.", "@"},
+		{"www.example.com.", "example.com.", "www"},
+		{"test.www.example.com.", "example.com.", "test.www"},
+		{"example.com.", "other.com.", "example.com."},
+		{"example.com", "example.com.", "@"},
+		{"www.example.com", "example.com.", "www"},
+		{"other.com.", "example.com.", "other.com."},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name+"-"+tc.origin, func(t *testing.T) {
+			result := relativeBindName(tc.name, tc.origin)
+			if result != tc.expected {
+				t.Errorf("relativeBindName(%q, %q) = %q, want %q", tc.name, tc.origin, result, tc.expected)
+			}
+		})
+	}
+}
+
+func TestSortRRSets(t *testing.T) {
+	records := []models.RRSet{
+		{Name: "example.com.", Type: "A"},
+		{Name: "example.com.", Type: "NS"},
+		{Name: "example.com.", Type: "SOA"},
+		{Name: "example.com.", Type: "MX"},
+	}
+
+	sortRRSets(records)
+
+	if records[0].Type != "SOA" {
+		t.Errorf("expected SOA first, got %s", records[0].Type)
+	}
+	if records[1].Type != "NS" {
+		t.Errorf("expected NS second, got %s", records[1].Type)
+	}
+}
+
+func TestFindSOATTY(t *testing.T) {
+	records := []models.RRSet{
+		{Name: "example.com.", Type: "SOA", TTL: 7200},
+		{Name: "example.com.", Type: "NS", TTL: 3600},
+	}
+
+	ttl := findSOATTY(records)
+	if ttl != 7200 {
+		t.Errorf("expected 7200, got %d", ttl)
+	}
+}
+
+func TestFindSOATTY_Default(t *testing.T) {
+	records := []models.RRSet{
+		{Name: "example.com.", Type: "NS", TTL: 3600},
+	}
+
+	ttl := findSOATTY(records)
+	if ttl != 3600 {
+		t.Errorf("expected default 3600, got %d", ttl)
+	}
+}
+
+func TestFormatRecordContent(t *testing.T) {
+	tests := []struct {
+		rtype, content string
+		priority       int
+		expected       string
+	}{
+		{"MX", "mail.example.com.", 10, "10 mail.example.com."},
+		{"TXT", "unquoted", 0, `"unquoted"`},
+		{"TXT", `"already quoted"`, 0, `"already quoted"`},
+		{"A", "192.0.2.1", 0, "192.0.2.1"},
+		{"CNAME", "example.com.", 0, "example.com."},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.rtype, func(t *testing.T) {
+			result := formatRecordContent(tc.rtype, tc.content, tc.priority)
+			if result != tc.expected {
+				t.Errorf("formatRecordContent(%q, %q, %d) = %q, want %q", tc.rtype, tc.content, tc.priority, result, tc.expected)
+			}
+		})
+	}
+}
