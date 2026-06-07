@@ -6,7 +6,7 @@
         <div class="container">
 <div class="page-header">
     <div>
-        <a href="/zones" class="breadcrumb">Zones</a> / <a href="/zones/{{.Zone.ID}}" class="breadcrumb">{{.Zone.Name}}</a> / <h2>Add Records</h2>
+        <a href="/zones" class="breadcrumb">Zones</a> / <a href="/zones/{{.Zone.ID}}" class="breadcrumb">{{trimDot .Zone.Name}}</a> / <h2>Add Records</h2>
     </div>
 </div>
 

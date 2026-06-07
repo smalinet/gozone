@@ -340,7 +340,7 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":          zone.Name + " - GoZone",
+		"Title":          strings.TrimSuffix(zone.Name, ".") + " - GoZone",
 		"User":           user,
 		"Zone":           zone,
 		"Records":        paginatedRecords,

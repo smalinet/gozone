@@ -101,7 +101,7 @@
             <label for="zone_id">Add zone</label>
             <select id="zone_id" name="zone_id" class="form-control">
                 {{range .AllZones}}
-                <option value="{{.Zone.ID}}">{{.Zone.Name}}</option>
+                <option value="{{.Zone.ID}}">{{trimDot .Zone.Name}}</option>
                 {{end}}
             </select>
         </div>

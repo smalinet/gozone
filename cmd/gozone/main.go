@@ -336,6 +336,7 @@ func parseTemplates() *template.Template {
 		"sub":          func(a, b int) int { return a - b },
 		"urlquery":     url.QueryEscape,
 		"relativeName": relativeName,
+		"trimDot":      func(s string) string { return strings.TrimSuffix(s, ".") },
 	}
 	tmpl, err := template.New("base").Funcs(funcMap).ParseFS(web.FS, "templates/*.html")
 	if err != nil {
