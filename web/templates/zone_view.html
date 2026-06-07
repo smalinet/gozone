@@ -33,8 +33,8 @@
             <tr>
                 <th>Name</th>
                 <th>Type</th>
-                <th>Content</th>
                 <th>TTL</th>
+                <th>Content</th>
                 <th>Prio</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -50,13 +50,13 @@
             <tr data-name="{{$rrset.Name}}" data-type="{{$rrset.Type}}" data-disabled="{{.Disabled}}">
                 <td><span class="rv rv-name">{{relativeName $rrset.Name $zoneName}}</span><span class="ev ev-name" style="display:none">{{$rrset.Name}}</span></td>
                 <td class="nowrap"><span class="badge badge-type badge-type-{{$rrset.Type}}">{{$rrset.Type}}</span></td>
-                <td>
-                    <span class="rv rv-content">{{.Content}}</span>
-                    <textarea class="ev ev-content" style="display:none" rows="2">{{.Content}}</textarea>
-                </td>
                 <td class="nowrap">
                     <span class="rv rv-ttl">{{$rrset.TTL}}</span>
                     <input type="number" class="ev ev-ttl form-control-inline" style="display:none" value="{{$rrset.TTL}}" min="0">
+                </td>
+                <td>
+                    <span class="rv rv-content">{{.Content}}</span>
+                    <textarea class="ev ev-content" style="display:none" rows="2">{{.Content}}</textarea>
                 </td>
                 <td class="nowrap">
                     <span class="rv rv-prio">{{if .Priority}}{{.Priority}}{{else}}-{{end}}</span>
