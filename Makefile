@@ -1,7 +1,7 @@
 APP_NAME := gozone
 BIN_DIR := ./bin
 
-.PHONY: default build run test test-verbose clean fmt vet gosec deps update docker-build docker-up docker-down help
+.PHONY: default build run test test-verbose clean fmt vet gosec deps update docker-build docker-up docker-down auto-gen-rel gen-rel gen-tag help
 
 default: help
 
@@ -64,6 +64,24 @@ docker-up:
 docker-down:
 	docker-compose down
 
+# auto generate the next release (requires git-cliff)
+auto-gen-rel:
+	@_TAG=v$$(git cliff --bumped-version) && \
+	git cliff --unreleased --tag $$_TAG -o && \
+	git commit -a -s -S -m "chore(release): prepare for $$_TAG" && \
+	git tag -s $$_TAG -m "$$_TAG"
+
+# generate release with specific tag
+gen-rel:
+	@[ -n "$(TAG)" ] || (echo "Usage: make gen-rel TAG=v0.8.0" && exit 1)
+	git cliff --unreleased --tag $(TAG) -o
+	git commit -a -s -S -m "chore(release): prepare for $(TAG)"
+	git tag -s $(TAG) -m "$(TAG)"
+
+# generate next tag
+gen-tag:
+	@git cliff --bumped-version
+
 # show available commands
 help:
 	@echo "Usage: make <target>"
@@ -82,4 +100,7 @@ help:
 	@echo "  docker-build    Build Docker image"
 	@echo "  docker-up       Start services with docker-compose"
 	@echo "  docker-down     Stop services"
+	@echo "  auto-gen-rel    Auto generate the next release"
+	@echo "  gen-rel         Generate release (use TAG=<version>)"
+	@echo "  gen-tag         Show next version tag"
 	@echo "  help            Show this message"
