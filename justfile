@@ -74,7 +74,7 @@ auto-gen-rel:
     {{ git_bin }} tag -s ${_TAG} -m "${_TAG}"
 
 # Generate release
-gen-release tag:
+gen-rel tag:
     {{ git_cliff_bin }} --unreleased --tag {{ tag }} -o
     {{ git_bin }} commit -a -s -S -m "chore(release): prepare for {{ tag }}"
     {{ git_bin }} tag -s {{ tag }} -m "{{ tag }}"
