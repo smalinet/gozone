@@ -87,6 +87,20 @@ func (h *Handler) ImportZone(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	logger.Info("Zone imported", "zone", zoneID, "format", format, "count", len(rrsets), "user", user.Username)
 
+	for _, rs := range rrsets {
+		contents := make([]string, 0, len(rs.Records))
+		for _, r := range rs.Records {
+			contents = append(contents, r.Content)
+		}
+		details := fmt.Sprintf("Imported %s %s -> %s", rs.Type, rs.Name, strings.Join(contents, ", "))
+		if _, err := h.DB.Exec(
+			"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'import_zone', ?)",
+			user.ID, zoneID, details,
+		); err != nil {
+			logger.Error("failed to log import_zone activity", "zone_id", zoneID, "error", err)
+		}
+	}
+
 	// #nosec G710 — zoneID from chi r.PathValue, controlled by route pattern
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
 }
