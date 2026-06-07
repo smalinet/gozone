@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -251,7 +252,31 @@ func (c *Client) ListRecords(ctx context.Context, zoneID string) ([]models.RRSet
 	if err := json.Unmarshal(body, &full); err != nil {
 		return nil, fmt.Errorf("unmarshal rrsets: %w", err)
 	}
+	for i := range full.RRSets {
+		for j := range full.RRSets[i].Records {
+			p, c := extractPriorityFromContent(full.RRSets[i].Type, full.RRSets[i].Records[j].Content)
+			if p > 0 {
+				full.RRSets[i].Records[j].Priority = p
+				full.RRSets[i].Records[j].Content = c
+			}
+		}
+	}
 	return full.RRSets, nil
+}
+
+func extractPriorityFromContent(recordType, content string) (int, string) {
+	if recordType != "MX" && recordType != "SRV" {
+		return 0, content
+	}
+	parts := strings.SplitN(content, " ", 2)
+	if len(parts) != 2 {
+		return 0, content
+	}
+	prio, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, content
+	}
+	return prio, parts[1]
 }
 
 // CreateRecord creates a new RRSet in a zone.

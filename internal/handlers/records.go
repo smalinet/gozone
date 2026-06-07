@@ -71,14 +71,21 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
+	recordContent := content
+	recordPriority := 0
+	if embedPriority {
+		recordContent = fmt.Sprintf("%d %s", priority, content)
+	}
+
 	rrset := models.RRSet{
 		Name: name,
 		Type: recordType,
 		TTL:  ttl,
 		Records: []models.RecordInfo{
 			{
-				Content:  content,
-				Priority: priority,
+				Content:  recordContent,
+				Priority: recordPriority,
 				Disabled: false,
 			},
 		},
@@ -173,14 +180,21 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
+	recordContent := content
+	recordPriority := 0
+	if embedPriority {
+		recordContent = fmt.Sprintf("%d %s", priority, content)
+	}
+
 	rrset := models.RRSet{
 		Name: name,
 		Type: recordType,
 		TTL:  ttl,
 		Records: []models.RecordInfo{
 			{
-				Content:  content,
-				Priority: priority,
+				Content:  recordContent,
+				Priority: recordPriority,
 				Disabled: disabled,
 			},
 		},
@@ -227,14 +241,21 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
+	recordContent := content
+	recordPriority := 0
+	if embedPriority {
+		recordContent = fmt.Sprintf("%d %s", priority, content)
+	}
+
 	rrset := models.RRSet{
 		Name: name,
 		Type: recordType,
 		TTL:  ttl,
 		Records: []models.RecordInfo{
 			{
-				Content:  content,
-				Priority: priority,
+				Content:  recordContent,
+				Priority: recordPriority,
 				Disabled: disabled,
 			},
 		},
@@ -273,6 +294,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	names := r.PostForm["name"]
 	types := r.PostForm["type"]
 	contents := r.PostForm["content"]
+	priorities := r.PostForm["priority"]
 
 	if len(names) == 0 || len(types) == 0 || len(contents) == 0 {
 		h.renderError(w, r, "At least one record is required")
@@ -298,6 +320,11 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 
 		ttl := 3600
 		priority := 0
+		if i < len(priorities) {
+			if p, err := strconv.Atoi(strings.TrimSpace(priorities[i])); err == nil && p > 0 {
+				priority = p
+			}
+		}
 
 		if err := validators.ValidateRecordType(recordType); err != nil {
 			h.renderError(w, r, "Invalid record type '"+recordType+"': "+err.Error())
@@ -308,12 +335,19 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
+		recordContent := content
+		recordPriority := 0
+		if embedPriority {
+			recordContent = fmt.Sprintf("%d %s", priority, content)
+		}
+
 		rrsets = append(rrsets, models.RRSet{
 			Name: name,
 			Type: recordType,
 			TTL:  ttl,
 			Records: []models.RecordInfo{
-				{Content: content, Priority: priority, Disabled: false},
+				{Content: recordContent, Priority: recordPriority, Disabled: false},
 			},
 		})
 		logEntries = append(logEntries, logEntry{recordType, name, content})

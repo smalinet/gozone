@@ -750,3 +750,68 @@ func TestDeleteTSIGKey_Error(t *testing.T) {
 		t.Error("expected error for 404 response")
 	}
 }
+
+func TestExtractPriorityFromContent(t *testing.T) {
+	tests := []struct {
+		name        string
+		recordType  string
+		content     string
+		wantPrio    int
+		wantContent string
+	}{
+		{
+			name:        "MX with priority in content",
+			recordType:  "MX",
+			content:     "10 mail.example.com.",
+			wantPrio:    10,
+			wantContent: "mail.example.com.",
+		},
+		{
+			name:        "MX without priority",
+			recordType:  "MX",
+			content:     "mail.example.com.",
+			wantPrio:    0,
+			wantContent: "mail.example.com.",
+		},
+		{
+			name:        "A record (not MX/SRV)",
+			recordType:  "A",
+			content:     "192.0.2.1",
+			wantPrio:    0,
+			wantContent: "192.0.2.1",
+		},
+		{
+			name:        "SRV with priority",
+			recordType:  "SRV",
+			content:     "5 5060 srv.example.com.",
+			wantPrio:    5,
+			wantContent: "5060 srv.example.com.",
+		},
+		{
+			name:        "SRV with all parts in content",
+			recordType:  "SRV",
+			content:     "10 60 5060 big.example.com.",
+			wantPrio:    10,
+			wantContent: "60 5060 big.example.com.",
+		},
+		{
+			name:        "Empty content",
+			recordType:  "MX",
+			content:     "",
+			wantPrio:    0,
+			wantContent: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotPrio, gotContent := extractPriorityFromContent(tt.recordType, tt.content)
+			if gotPrio != tt.wantPrio {
+				t.Errorf("priority = %d, want %d", gotPrio, tt.wantPrio)
+			}
+			if gotContent != tt.wantContent {
+				t.Errorf("content = %q, want %q", gotContent, tt.wantContent)
+			}
+		})
+	}
+}

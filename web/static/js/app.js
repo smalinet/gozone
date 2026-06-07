@@ -129,7 +129,11 @@ function addRecordRow() {
     var container = document.getElementById('record-rows');
     var rows = container.querySelectorAll('.record-row');
     var template = rows[0].cloneNode(true);
-    var inputs = template.querySelectorAll('input[type=text]');
+    var inputs = template.querySelectorAll('input[type=text], input[type=number]');
     for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
+    var select = template.querySelector('select[name=type]');
+    if (select) select.value = select.querySelector('option').value;
+    var prioGrp = template.querySelector('.record-prio-group');
+    if (prioGrp) prioGrp.style.display = 'none';
     container.appendChild(template);
 }

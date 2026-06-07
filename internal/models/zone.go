@@ -23,18 +23,20 @@ type Record struct {
 	Type     string `json:"type"`
 	Content  string `json:"content"`
 	TTL      int    `json:"ttl"`
-	Priority int    `json:"priority"`
+	Priority int    `json:"priority,omitempty"`
 	Disabled bool   `json:"disabled"`
 	SetPTR   bool   `json:"set_ptr,omitempty"`
 }
 
 // RecordInfo is the PowerDNS API representation of a record with metadata.
+// Priority uses omitempty because PowerDNS rejects the "priority" element in
+// PATCH body — it must be embedded in the content string for MX/SRV types.
 type RecordInfo struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
 	Content  string `json:"content"`
 	TTL      int    `json:"ttl"`
-	Priority int    `json:"priority"`
+	Priority int    `json:"priority,omitempty"`
 	Disabled bool   `json:"disabled"`
 }
 
