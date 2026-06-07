@@ -318,12 +318,12 @@ func (c *Client) patchZone(ctx context.Context, zoneID string, rrsets []models.R
 		"rrsets": rrsets,
 	}
 
-	_, status, err := c.do(ctx, "PATCH", "/servers/"+c.serverID+"/zones/"+zoneID, payload)
+	body, status, err := c.do(ctx, "PATCH", "/servers/"+c.serverID+"/zones/"+zoneID, payload)
 	if err != nil {
 		return err
 	}
 	if status < 200 || status >= 300 {
-		return fmt.Errorf("unexpected status %d", status)
+		return fmt.Errorf("unexpected status %d: %s", status, string(body))
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -278,6 +279,33 @@ func TestRecordInfo_JSON(t *testing.T) {
 
 	if decoded.Content != "10.0.0.1" {
 		t.Errorf("Content: got %s, want 10.0.0.1", decoded.Content)
+	}
+	if decoded.Name != "www" || decoded.Type != "A" || decoded.TTL != 300 {
+		t.Errorf("Name/Type/TTL should survive round-trip: got Name=%s Type=%s TTL=%d", decoded.Name, decoded.Type, decoded.TTL)
+	}
+	jsonStr := string(data)
+	if decoded.Priority != 0 {
+		t.Errorf("Priority should be 0 after unmarshal (omitted), got %d", decoded.Priority)
+	}
+	if strings.Contains(jsonStr, `"priority"`) {
+		t.Errorf("priority:0 should be omitted from JSON, got: %s", jsonStr)
+	}
+}
+
+func TestRecordInfo_OmitEmpty(t *testing.T) {
+	ri := RecordInfo{Content: "1.2.3.4", Disabled: false}
+	data, err := json.Marshal(ri)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	jsonStr := string(data)
+	for _, field := range []string{`"name"`, `"type"`, `"ttl"`, `"priority"`} {
+		if strings.Contains(jsonStr, field) {
+			t.Errorf("zero-value field %s should be omitted, got: %s", field, jsonStr)
+		}
+	}
+	if !strings.Contains(jsonStr, `"content"`) {
+		t.Error("content should be present")
 	}
 }
 

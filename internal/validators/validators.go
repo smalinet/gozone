@@ -214,10 +214,10 @@ func ValidateRecordContent(recordType, content string) error {
 		return ValidateDomainName(strings.TrimSuffix(parts[0], "."))
 	case "SRV":
 		parts := strings.Fields(content)
-		if len(parts) < 4 {
-			return fmt.Errorf("SRV content must have at least 4 fields: priority weight port target")
+		if len(parts) < 3 {
+			return fmt.Errorf("SRV content must have at least 3 fields: priority|weight port target")
 		}
-		return ValidateDomainName(parts[3])
+		return ValidateDomainName(parts[len(parts)-1])
 	case "CAA":
 		parts := strings.Fields(content)
 		if len(parts) < 3 {

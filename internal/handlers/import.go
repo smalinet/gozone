@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -348,7 +349,6 @@ func groupBindRecords(raw []bindRecord) []models.RRSet {
 			records = append(records, models.RecordInfo{
 				Content:  r.data,
 				Disabled: false,
-				Priority: extractPriority(r.rtype, r.data),
 			})
 		}
 
@@ -422,6 +422,12 @@ func parseCSVZone(reader *csv.Reader) ([]models.RRSet, error) {
 			name += "."
 		}
 
+		csvContent := content
+		csvPriority := 0
+		if rtype == "MX" || rtype == "SRV" {
+			csvContent = fmt.Sprintf("%d %s", priority, content)
+		}
+
 		k := key{name, rtype}
 		if _, exists := groups[k]; !exists {
 			order = append(order, k)
@@ -429,9 +435,9 @@ func parseCSVZone(reader *csv.Reader) ([]models.RRSet, error) {
 		}
 
 		groups[k] = append(groups[k], models.RecordInfo{
-			Content:  content,
+			Content:  csvContent,
 			Disabled: disabled,
-			Priority: priority,
+			Priority: csvPriority,
 		})
 	}
 

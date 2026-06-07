@@ -409,6 +409,107 @@ func TestBatchCreateRecords_Success(t *testing.T) {
 	}
 }
 
+func TestBatchCreateRecords_MX(t *testing.T) {
+	type patchBody struct {
+		RRSets []models.RRSet `json:"rrsets"`
+	}
+	var body patchBody
+
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PATCH" {
+			json.NewDecoder(r.Body).Decode(&body)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	formBody := "name=mail&type=MX&content=mail.example.com.&priority=10&ttl=600"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/batch-create", strings.NewReader(formBody))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.BatchCreateRecords(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected 303 redirect, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(body.RRSets) != 1 {
+		t.Fatalf("expected 1 rrset, got %d", len(body.RRSets))
+	}
+	rs := body.RRSets[0]
+	if rs.Name != "mail" || rs.Type != "MX" {
+		t.Errorf("unexpected rrset: name=%s type=%s", rs.Name, rs.Type)
+	}
+	if rs.TTL != 600 {
+		t.Errorf("expected TTL 600, got %d", rs.TTL)
+	}
+	if len(rs.Records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(rs.Records))
+	}
+	if rs.Records[0].Content != "10 mail.example.com." {
+		t.Errorf("expected content '10 mail.example.com.', got %q", rs.Records[0].Content)
+	}
+	if rs.Records[0].Priority != 0 {
+		t.Errorf("expected priority 0 (omitted), got %d", rs.Records[0].Priority)
+	}
+}
+
+func TestBatchCreateRecords_SRV(t *testing.T) {
+	type patchBody struct {
+		RRSets []models.RRSet `json:"rrsets"`
+	}
+	var body patchBody
+
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PATCH" {
+			json.NewDecoder(r.Body).Decode(&body)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	formBody := "name=_sip._tcp&type=SRV&content=5 5060 sip.example.com.&priority=10&ttl=3600"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/batch-create", strings.NewReader(formBody))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.BatchCreateRecords(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected 303 redirect, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(body.RRSets) != 1 {
+		t.Fatalf("expected 1 rrset, got %d (%+v)", len(body.RRSets), body)
+	}
+	rs := body.RRSets[0]
+	if rs.Type != "SRV" {
+		t.Errorf("expected SRV, got %s", rs.Type)
+	}
+	if len(rs.Records) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(rs.Records))
+	}
+	if rs.Records[0].Content != "10 5 5060 sip.example.com." {
+		t.Errorf("expected content '10 5 5060 sip.example.com.', got %q", rs.Records[0].Content)
+	}
+	if rs.Records[0].Priority != 0 {
+		t.Errorf("expected priority 0 (omitted), got %d", rs.Records[0].Priority)
+	}
+}
+
 func TestBatchCreateRecords_PDNSError_NoLogs(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -457,5 +558,44 @@ func TestBatchCreateRecords_EmptyRecords(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "At least one record is required") {
 		t.Error("expected error message")
+	}
+}
+
+func TestPrepareMXSRVContent(t *testing.T) {
+	tests := []struct {
+		name          string
+		recordType    string
+		content       string
+		priority      int
+		wantContent   string
+		wantRecordPri int
+	}{
+		// MX: priority embedding, no existing prefix (form: 1 token)
+		{"MX_new", "MX", "mail.example.com.", 10, "10 mail.example.com.", 0},
+		// MX: strip existing priority prefix from PDNS then re-embed (2 tokens)
+		{"MX_update", "MX", "10 mail.example.com.", 20, "20 mail.example.com.", 0},
+		// MX: priority=0
+		{"MX_zero", "MX", "mail.example.com.", 0, "0 mail.example.com.", 0},
+		// SRV: new form record (3 tokens: weight port target) — do NOT strip weight
+		{"SRV_new", "SRV", "5 5060 sip.example.com.", 10, "10 5 5060 sip.example.com.", 0},
+		// SRV: update from PDNS (4 tokens: priority weight port target) — strip old priority
+		{"SRV_update", "SRV", "10 5 5060 sip.example.com.", 5, "5 5 5060 sip.example.com.", 0},
+		// Non-MX/SRV: pass through unchanged
+		{"A", "A", "192.0.2.1", 0, "192.0.2.1", 0},
+		{"CNAME", "CNAME", "target.example.com.", 0, "target.example.com.", 0},
+		{"TXT", "TXT", "\"v=spf1 -all\"", 0, "\"v=spf1 -all\"", 0},
+		{"NS", "NS", "ns1.example.com.", 0, "ns1.example.com.", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotContent, gotPrio := prepareMXSRVContent(tt.recordType, tt.content, tt.priority)
+			if gotContent != tt.wantContent {
+				t.Errorf("content = %q, want %q", gotContent, tt.wantContent)
+			}
+			if gotPrio != tt.wantRecordPri {
+				t.Errorf("recordInfo priority = %d, want %d", gotPrio, tt.wantRecordPri)
+			}
+		})
 	}
 }

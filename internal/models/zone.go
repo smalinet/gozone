@@ -32,10 +32,10 @@ type Record struct {
 // Priority uses omitempty because PowerDNS rejects the "priority" element in
 // PATCH body — it must be embedded in the content string for MX/SRV types.
 type RecordInfo struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
+	Name     string `json:"name,omitempty"`
+	Type     string `json:"type,omitempty"`
 	Content  string `json:"content"`
-	TTL      int    `json:"ttl"`
+	TTL      int    `json:"ttl,omitempty"`
 	Priority int    `json:"priority,omitempty"`
 	Disabled bool   `json:"disabled"`
 }

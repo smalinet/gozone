@@ -71,12 +71,7 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
-	recordContent := content
-	recordPriority := 0
-	if embedPriority {
-		recordContent = fmt.Sprintf("%d %s", priority, content)
-	}
+	recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
 
 	rrset := models.RRSet{
 		Name: name,
@@ -180,12 +175,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
-	recordContent := content
-	recordPriority := 0
-	if embedPriority {
-		recordContent = fmt.Sprintf("%d %s", priority, content)
-	}
+	recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
 
 	rrset := models.RRSet{
 		Name: name,
@@ -241,12 +231,7 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
-	recordContent := content
-	recordPriority := 0
-	if embedPriority {
-		recordContent = fmt.Sprintf("%d %s", priority, content)
-	}
+	recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
 
 	rrset := models.RRSet{
 		Name: name,
@@ -341,12 +326,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		embedPriority := priority > 0 && (recordType == "MX" || recordType == "SRV")
-		recordContent := content
-		recordPriority := 0
-		if embedPriority {
-			recordContent = fmt.Sprintf("%d %s", priority, content)
-		}
+		recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
 
 		rrsets = append(rrsets, models.RRSet{
 			Name: name,
@@ -380,6 +360,34 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 
 	// #nosec G710 -- zoneID from chi r.PathValue, controlled by route pattern
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
+}
+
+// prepareMXSRVContent embeds priority in the content field for MX and SRV records.
+// It strips any existing priority prefix from content first when the token count
+// indicates the content was read from PowerDNS (which stores priority directly in
+// the content field). For MX: 2+ tokens with leading number = PDNS read path.
+// For SRV: 4+ tokens with leading number = PDNS read path (priority weight port target).
+// Always returns 0 for the RecordInfo priority because PowerDNS rejects the
+// "priority" element in record PATCH body.
+func prepareMXSRVContent(recordType, content string, priority int) (string, int) {
+	if recordType != "MX" && recordType != "SRV" {
+		return content, priority
+	}
+	tokens := strings.Fields(content)
+	if len(tokens) > 0 {
+		if _, err := strconv.Atoi(tokens[0]); err == nil {
+			// Only strip when token count indicates PDNS read-path content:
+			// MX from PDNS: "10 mail.example.com." (2+ tokens)
+			// SRV from PDNS: "10 5 5060 target." (4 tokens: priority weight port target)
+			// SRV from form:  "5 5060 target."    (3 tokens: weight port target)
+			isPDNSFormat := (recordType == "MX" && len(tokens) >= 2) ||
+				(recordType == "SRV" && len(tokens) >= 4)
+			if isPDNSFormat {
+				content = strings.Join(tokens[1:], " ")
+			}
+		}
+	}
+	return fmt.Sprintf("%d %s", priority, content), 0
 }
 
 func parseRecordForm(r *http.Request) (name, recordType, content string, ttl, priority int, disabled bool, err error) {
