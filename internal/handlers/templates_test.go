@@ -232,6 +232,38 @@ func TestDeleteTemplate(t *testing.T) {
 	}
 }
 
+func TestDeleteBuiltinTemplate(t *testing.T) {
+	h, srv := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
+	defer srv.Close()
+
+	result, err := h.DB.Exec(
+		"INSERT INTO zone_templates (name, description, is_builtin) VALUES (?, ?, ?)",
+		"builtin-tmpl", "A built-in template", true,
+	)
+	if err != nil {
+		t.Fatalf("seed builtin template: %v", err)
+	}
+	templateID, _ := result.LastInsertId()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/templates/"+strconv.FormatInt(templateID, 10)+"/delete", nil)
+	r.SetPathValue("template_id", strconv.FormatInt(templateID, 10))
+	r = withUserContext(r, user)
+	h.DeleteTemplate(w, r)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Cannot delete a built-in template") {
+		t.Errorf("expected built-in guard error, got: %s", body)
+	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM zone_templates WHERE id = ?", templateID).Scan(&count)
+	if count != 1 {
+		t.Error("expected built-in template to still exist")
+	}
+}
+
 func TestAddTemplateRecord(t *testing.T) {
 	h, srv := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
 	defer srv.Close()

@@ -158,13 +158,26 @@ func (h *Handler) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/templates/"+templateIDStr+"/edit", http.StatusSeeOther)
 }
 
-// DeleteTemplate deletes a template.
+// DeleteTemplate deletes a template. Built-in templates cannot be deleted.
 func (h *Handler) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	templateIDStr := r.PathValue("template_id")
+
+	var isBuiltin bool
+	err := h.DB.QueryRow("SELECT is_builtin FROM zone_templates WHERE id = ?", templateIDStr).Scan(&isBuiltin)
+	if err != nil {
+		h.renderInternalError(w, r, "Template not found", err)
+		return
+	}
+	if isBuiltin {
+		h.renderError(w, r, "Cannot delete a built-in template")
+		return
+	}
+
 	if _, err := h.DB.Exec("DELETE FROM zone_templates WHERE id = ?", templateIDStr); err != nil {
 		h.renderInternalError(w, r, "Failed to delete template", err)
 		return
 	}
+	// #nosec G710 -- templateIDStr from chi r.PathValue, controlled by route pattern
 	http.Redirect(w, r, "/templates", http.StatusSeeOther)
 }
 
