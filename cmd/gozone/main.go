@@ -158,6 +158,9 @@ func main() {
 				r.Post("/zones/{zone_id}/records/inline-update", h.InlineUpdateRecord)
 				r.Post("/zones/{zone_id}/records/delete", h.DeleteRecord)
 			r.Post("/zones/{zone_id}/import", h.ImportZone)
+			r.Post("/zones/{zone_id}/cryptokeys/create", h.CreateCryptokey)
+			r.Post("/zones/{zone_id}/cryptokeys/{key_id}/toggle", h.ToggleCryptokey)
+			r.Post("/zones/{zone_id}/cryptokeys/{key_id}/delete", h.DeleteCryptokey)
 			})
 
 			// Admin-only routes
@@ -173,13 +176,9 @@ func main() {
 
 				r.Post("/zones/{zone_id}/rectify", h.RectifyZone)
 				r.Post("/zones/{zone_id}/notify", h.NotifyZone)
-				r.Post("/zones/{zone_id}/metadata/create", h.CreateMetadata)
-				r.Post("/zones/{zone_id}/metadata/delete", h.DeleteMetadata)
-
-				r.Post("/zones/{zone_id}/cryptokeys/create", h.CreateCryptokey)
-				r.Post("/zones/{zone_id}/cryptokeys/{key_id}/toggle", h.ToggleCryptokey)
-				r.Post("/zones/{zone_id}/cryptokeys/{key_id}/delete", h.DeleteCryptokey)
-			})
+			r.Post("/zones/{zone_id}/metadata/create", h.CreateMetadata)
+			r.Post("/zones/{zone_id}/metadata/delete", h.DeleteMetadata)
+		})
 
 				r.Get("/users", h.ListUsers)
 				r.Get("/users/new", h.CreateUserPage)
