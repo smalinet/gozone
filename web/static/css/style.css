@@ -757,6 +757,21 @@ details summary {
     width: 1%;
 }
 
+.ev-prio {
+    min-width: 4rem;
+    width: 4rem;
+}
+
+.ev-content {
+    min-width: 12rem;
+    box-sizing: border-box;
+}
+
+.ev-ttl {
+    min-width: 5rem;
+    width: 5rem;
+}
+
 .form-actions {
     display: flex;
     gap: 0.5rem;
