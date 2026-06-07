@@ -14,11 +14,23 @@ import (
 )
 
 func dnssecHandler() testutil.PDNSHandlerFunc {
+	return dnssecHandlerWithCounter(nil)
+}
+
+func dnssecHandlerWithCounter(rectifyCalls *int) testutil.PDNSHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		path := r.URL.Path
 		method := r.Method
 
+		if method == http.MethodPut && strings.Contains(path, "/rectify") {
+			if rectifyCalls != nil {
+				*rectifyCalls++
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"result":"Rectified"}`))
+			return
+		}
 		if method == http.MethodGet && strings.Contains(path, "cryptokeys") && !strings.Contains(path, "cryptokeys/") {
 			w.Write([]byte(`[{"type":"Cryptokey","id":1,"keytype":"ksk","active":true,"published":true,"dnskey":"...","ds":["SHA256 abc"],"algorithm":"ECDSAP256SHA256","bits":256}]`))
 			return
@@ -49,7 +61,8 @@ func dnssecHandler() testutil.PDNSHandlerFunc {
 }
 
 func TestCreateCryptokey(t *testing.T) {
-	h, srv := newTestHandlerWithPDNS(t, dnssecHandler())
+	var rectifyCalls int
+	h, srv := newTestHandlerWithPDNS(t, dnssecHandlerWithCounter(&rectifyCalls))
 	defer srv.Close()
 
 	userID := seedUserWithHash(t, h, "cryptouser", "pass", "admin")
@@ -72,10 +85,15 @@ func TestCreateCryptokey(t *testing.T) {
 	if count != 1 {
 		t.Errorf("expected 1 activity log entry, got %d", count)
 	}
+
+	if rectifyCalls != 1 {
+		t.Errorf("expected 1 rectify call after create, got %d", rectifyCalls)
+	}
 }
 
 func TestToggleCryptokey_Activate(t *testing.T) {
-	h, srv := newTestHandlerWithPDNS(t, dnssecHandler())
+	var rectifyCalls int
+	h, srv := newTestHandlerWithPDNS(t, dnssecHandlerWithCounter(&rectifyCalls))
 	defer srv.Close()
 
 	userID := seedUserWithHash(t, h, "toggleuser", "pass", "admin")
@@ -93,10 +111,15 @@ func TestToggleCryptokey_Activate(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Errorf("expected 303, got %d", w.Code)
 	}
+
+	if rectifyCalls != 1 {
+		t.Errorf("expected 1 rectify call after toggle, got %d", rectifyCalls)
+	}
 }
 
 func TestToggleCryptokey_Deactivate(t *testing.T) {
-	h, srv := newTestHandlerWithPDNS(t, dnssecHandler())
+	var rectifyCalls int
+	h, srv := newTestHandlerWithPDNS(t, dnssecHandlerWithCounter(&rectifyCalls))
 	defer srv.Close()
 
 	userID := seedUserWithHash(t, h, "deactuser", "pass", "admin")
@@ -114,10 +137,15 @@ func TestToggleCryptokey_Deactivate(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Errorf("expected 303, got %d", w.Code)
 	}
+
+	if rectifyCalls != 1 {
+		t.Errorf("expected 1 rectify call after toggle, got %d", rectifyCalls)
+	}
 }
 
 func TestDeleteCryptokey(t *testing.T) {
-	h, srv := newTestHandlerWithPDNS(t, dnssecHandler())
+	var rectifyCalls int
+	h, srv := newTestHandlerWithPDNS(t, dnssecHandlerWithCounter(&rectifyCalls))
 	defer srv.Close()
 
 	userID := seedUserWithHash(t, h, "delcryptouser", "pass", "admin")
@@ -138,6 +166,10 @@ func TestDeleteCryptokey(t *testing.T) {
 	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='delete_cryptokey'").Scan(&count)
 	if count != 1 {
 		t.Errorf("expected 1 activity log entry, got %d", count)
+	}
+
+	if rectifyCalls != 1 {
+		t.Errorf("expected 1 rectify call after delete, got %d", rectifyCalls)
 	}
 }
 

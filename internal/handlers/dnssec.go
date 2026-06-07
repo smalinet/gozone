@@ -39,6 +39,11 @@ func (h *Handler) CreateCryptokey(w http.ResponseWriter, r *http.Request) {
 		logger.Error("failed to log create_cryptokey", "zone_id", zoneID, "error", err)
 	}
 
+	if err := h.PDNS.RectifyZone(r.Context(), zoneID); err != nil {
+		h.renderInternalError(w, r, "Key created but rectification failed", err)
+		return
+	}
+
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther) // #nosec G710
 }
 
@@ -72,6 +77,11 @@ func (h *Handler) ToggleCryptokey(w http.ResponseWriter, r *http.Request) {
 		logger.Error("failed to log cryptokey toggle", "zone_id", zoneID, "error", err)
 	}
 
+	if err := h.PDNS.RectifyZone(r.Context(), zoneID); err != nil {
+		h.renderInternalError(w, r, "Key toggled but rectification failed", err)
+		return
+	}
+
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther) // #nosec G710
 }
 
@@ -97,6 +107,11 @@ func (h *Handler) DeleteCryptokey(w http.ResponseWriter, r *http.Request) {
 		user.ID, zoneID, fmt.Sprintf("Deleted key %d", keyID),
 	); err != nil {
 		logger.Error("failed to log delete_cryptokey", "zone_id", zoneID, "error", err)
+	}
+
+	if err := h.PDNS.RectifyZone(r.Context(), zoneID); err != nil {
+		h.renderInternalError(w, r, "Key deleted but rectification failed", err)
+		return
 	}
 
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther) // #nosec G710

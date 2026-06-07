@@ -49,10 +49,15 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
   - ECDSAP256SHA256 (ecdsa256) pre-selected as default
 
 - [x] **Zone metadata for DNSSEC**
-  - `NSEC3PARAM` metadata available through existing metadata management UI
-  - `PRESIGNED` flag available through metadata UI
-  - `PUBLISH-CDS` / `PUBLISH-CDNSKEY` available through metadata UI
-  - Metadata kinds list includes all 14 DNSSEC-related kinds
+   - `NSEC3PARAM` metadata available through existing metadata management UI
+   - `PRESIGNED` flag available through metadata UI
+   - `PUBLISH-CDS` / `PUBLISH-CDNSKEY` available through metadata UI
+   - Metadata kinds list includes all 14 DNSSEC-related kinds
+
+- [x] **Auto-rectification after key operations**
+   - `RectifyZone` called automatically after `CreateCryptokey`, `ToggleCryptokey`, and `DeleteCryptokey`
+   - Rectify button in zone view header (admin-only)
+   - Handles rectify failure with error page (no silent inconsistency)
 
 ## Export / Import
 

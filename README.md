@@ -16,7 +16,7 @@ A clean web interface for managing PowerDNS authoritative DNS servers.
 - **Activity Logging**: Track all zone, metadata, TSIG key, and user operations
 - **REST API**: JSON API for zone, record, and statistics automation
 - **PowerDNS Integration**: Communicates through the PowerDNS REST API
-- **DNSSEC Support**: Zone rectification and slave notification
+- **DNSSEC Support**: Zone rectification (manual + auto after key ops), slave notification
 - **Dark/Light Theme**: Toggle with localStorage persistence
 - **Single Binary**: Compiled Go binary with embedded templates, static files, and SQLite database
 - **Docker Support**: Ready-to-use Docker and docker-compose setup
@@ -165,7 +165,7 @@ Manage TSIG keys for secured DNS operations (zone transfers, dynamic updates). A
 
 ### DNSSEC
 
-Admin users can manage DNSSEC for each zone directly from the zone view page. Create KSK (Key Signing Key) and ZSK (Zone Signing Key) pairs with selectable algorithms (RSA/SHA-256, RSA/SHA-512, ECDSA P-256, ECDSA P-384, Ed25519, Ed448). Activate/deactivate keys, view DS records for parent zone configuration, and delete deactivated keys. All operations are logged in the activity feed.
+Admin users can manage DNSSEC for each zone directly from the zone view page. Create KSK (Key Signing Key) and ZSK (Zone Signing Key) pairs with selectable algorithms (RSA/SHA-256, RSA/SHA-512, ECDSA P-256, ECDSA P-384, Ed25519, Ed448). Activate/deactivate keys, view DS records for parent zone configuration, and delete deactivated keys. All operations are logged in the activity feed. Zone rectification is triggered automatically after every key operation (create, toggle, delete) and is also available via the Rectify button (admin-only) in the zone header.
 
 ### Export / Import
 
