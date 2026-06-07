@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -120,21 +121,29 @@ func TestCreateRecord_EmptyFields(t *testing.T) {
 
 func TestUpdateRecord_Success(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodPatch {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(models.Zone{
-			ID: "example.com", Name: "example.com", Kind: "Native",
-		})
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone:   models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{{Name: "www.example.com", Type: "A", TTL: 300, Records: []models.RecordInfo{{Content: "1.2.3.4", Disabled: false}}}},
+			})
+			return
+		}
+		json.NewEncoder(w).Encode(models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"})
 	})
 	defer pdnsSrv.Close()
 
 	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
 	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
 
-	body := "name=www.example.com&type=A&content=5.6.7.8&ttl=600"
+	body := "name=www.example.com&type=A&content=5.6.7.8&ttl=600&original_content=1.2.3.4&original_priority=0"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/update", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -313,7 +322,22 @@ func TestEditRecordPage_RecordRetrievalError(t *testing.T) {
 
 func TestInlineUpdateRecord_Success(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodPatch {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone:   models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{{Name: "www.example.com", Type: "A", TTL: 300, Records: []models.RecordInfo{{Content: "10.0.0.1", Disabled: false}}}},
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
 	})
 	defer pdnsSrv.Close()
 
@@ -322,7 +346,7 @@ func TestInlineUpdateRecord_Success(t *testing.T) {
 	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
 	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
 
-	body := "name=www.example.com&type=A&content=10.0.0.1&ttl=3600&priority=0&disabled=false"
+	body := "name=www.example.com&type=A&content=10.0.0.2&ttl=3600&priority=0&disabled=false&original_content=10.0.0.1&original_priority=0"
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/inline-update", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -376,6 +400,168 @@ func TestInlineUpdateRecord_InvalidType(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestInlineUpdateRecord_PreservesSiblingRecords(t *testing.T) {
+	var patchedRRSet []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone: models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{
+					{
+						Name: "example.com.",
+						Type: "MX",
+						TTL:  3600,
+						Records: []models.RecordInfo{
+							{Content: "10 mail1.example.com.", Priority: 0, Disabled: false},
+							{Content: "20 mail2.example.com.", Priority: 0, Disabled: false},
+						},
+					},
+				},
+			})
+			return
+		}
+		if r.Method == http.MethodPatch {
+			body, _ := io.ReadAll(r.Body)
+			var payload struct {
+				RRSets []models.RRSet `json:"rrsets"`
+			}
+			json.Unmarshal(body, &payload)
+			patchedRRSet = payload.RRSets
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "name=example.com&type=MX&content=mail3.example.com&ttl=3600&priority=30&disabled=false&original_content=mail2.example.com.&original_priority=20"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/inline-update", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.InlineUpdateRecord(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(patchedRRSet) != 1 {
+		t.Fatalf("expected 1 patched RRSet, got %d", len(patchedRRSet))
+	}
+
+	records := patchedRRSet[0].Records
+	if len(records) != 2 {
+		t.Fatalf("expected 2 records preserved, got %d", len(records))
+	}
+
+	found1, found2 := false, false
+	for _, rec := range records {
+		if strings.Contains(rec.Content, "mail1.example.com") {
+			found1 = true
+		}
+		if strings.Contains(rec.Content, "mail3.example.com") {
+			found2 = true
+		}
+	}
+	if !found1 {
+		t.Errorf("original record mail1 not preserved in PATCH body")
+	}
+	if !found2 {
+		t.Errorf("updated record mail3 not found in PATCH body")
+	}
+}
+
+func TestUpdateRecord_PreservesSiblingRecords(t *testing.T) {
+	var patchedRRSet []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone: models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{
+					{
+						Name: "example.com.",
+						Type: "MX",
+						TTL:  3600,
+						Records: []models.RecordInfo{
+							{Content: "10 mx1.example.com.", Priority: 0, Disabled: false},
+							{Content: "20 mx2.example.com.", Priority: 0, Disabled: false},
+						},
+					},
+				},
+			})
+			return
+		}
+		if r.Method == http.MethodPatch {
+			body, _ := io.ReadAll(r.Body)
+			var payload struct {
+				RRSets []models.RRSet `json:"rrsets"`
+			}
+			json.Unmarshal(body, &payload)
+			patchedRRSet = payload.RRSets
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "name=example.com&type=MX&content=mx3.example.com&ttl=3600&priority=30&original_content=mx2.example.com.&original_priority=20"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/update", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.UpdateRecord(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected redirect 303, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(patchedRRSet) != 1 {
+		t.Fatalf("expected 1 patched RRSet, got %d", len(patchedRRSet))
+	}
+
+	records := patchedRRSet[0].Records
+	if len(records) != 2 {
+		t.Fatalf("expected 2 records preserved, got %d", len(records))
+	}
+
+	found1, found2 := false, false
+	for _, rec := range records {
+		if strings.Contains(rec.Content, "mx1.example.com") {
+			found1 = true
+		}
+		if strings.Contains(rec.Content, "mx3.example.com") {
+			found2 = true
+		}
+	}
+	if !found1 {
+		t.Errorf("original record mx1 not preserved in PATCH body")
+	}
+	if !found2 {
+		t.Errorf("updated record mx3 not found in PATCH body")
 	}
 }
 

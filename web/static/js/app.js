@@ -92,6 +92,8 @@ function saveRecordRow(btn, zoneID, csrfToken) {
     formData.append('ttl', ttl);
     formData.append('priority', prio);
     formData.append('disabled', disabled ? 'true' : 'false');
+    formData.append('original_content', row.getAttribute('data-original-content'));
+    formData.append('original_priority', row.getAttribute('data-original-priority'));
 
     fetch('/zones/' + zoneID + '/records/inline-update', {
         method: 'POST',

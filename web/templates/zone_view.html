@@ -47,7 +47,7 @@
             {{range .Records}}
             {{$rrset := .}}
             {{range .Records}}
-            <tr data-name="{{$rrset.Name}}" data-type="{{$rrset.Type}}" data-disabled="{{.Disabled}}">
+            <tr data-name="{{$rrset.Name}}" data-type="{{$rrset.Type}}" data-original-content="{{.Content}}" data-original-priority="{{if .Priority}}{{.Priority}}{{else}}0{{end}}" data-disabled="{{.Disabled}}">
                 <td class="col-name"><span class="rv rv-name">{{relativeName $rrset.Name $zoneName}}</span><span class="ev ev-name" style="display:none">{{$rrset.Name}}</span></td>
                 <td class="nowrap"><span class="badge badge-type badge-type-{{$rrset.Type}}">{{$rrset.Type}}</span></td>
                 <td class="nowrap">

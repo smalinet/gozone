@@ -152,8 +152,9 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 
 // UpdateRecord replaces a DNS record in a zone from form data (POST /zones/{zone_id}/records/update).
 //
-// Uses the REPLACE changetype to ensure idempotent updates. Accepts name, type,
-// content, ttl, priority, and disabled form values.
+// Fetches the existing RRSet from PDNS, merges the edited record identified by
+// original_content + original_priority, and sends the complete RRSet with REPLACE
+// to preserve any sibling records.
 func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 
@@ -167,6 +168,9 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	originalContent := strings.TrimSpace(r.FormValue("original_content"))
+	originalPriority, _ := strconv.Atoi(r.FormValue("original_priority"))
+
 	name = normalizeRecordName(name, zoneID)
 
 	if err := validators.ValidateRecordType(recordType); err != nil {
@@ -179,19 +183,38 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
+	allRecords, err := h.PDNS.ListRecords(r.Context(), zoneID)
+	if err != nil {
+		h.renderInternalError(w, r, "Failed to fetch existing records", err)
+		return
+	}
+
+	var existingRRSet *models.RRSet
+	for _, rr := range allRecords {
+		if rr.Name == name && rr.Type == recordType {
+			existingRRSet = &rr
+			break
+		}
+	}
+
+	var updatedRecords []models.RecordInfo
+	if existingRRSet != nil {
+		updatedRecords = mergeRecordIntoRRSet(existingRRSet.Records, originalContent, originalPriority,
+			models.RecordInfo{Content: content, Priority: priority, Disabled: disabled})
+	} else {
+		updatedRecords = []models.RecordInfo{{Content: content, Priority: priority, Disabled: disabled}}
+	}
+
+	for i := range updatedRecords {
+		updatedRecords[i].Content, updatedRecords[i].Priority =
+			prepareRecordContent(recordType, updatedRecords[i].Content, updatedRecords[i].Priority)
+	}
 
 	rrset := models.RRSet{
-		Name: name,
-		Type: recordType,
-		TTL:  ttl,
-		Records: []models.RecordInfo{
-			{
-				Content:  recordContent,
-				Priority: recordPriority,
-				Disabled: disabled,
-			},
-		},
+		Name:    name,
+		Type:    recordType,
+		TTL:     ttl,
+		Records: updatedRecords,
 	}
 
 	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
@@ -212,6 +235,10 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 // InlineUpdateRecord updates a record via AJAX and returns JSON (POST /zones/{zone_id}/records/inline-update).
+//
+// Fetches the existing RRSet from PDNS, merges the edited record identified by
+// original_content + original_priority, and sends the complete RRSet with REPLACE
+// to preserve any sibling records.
 func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 
@@ -225,6 +252,9 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	originalContent := strings.TrimSpace(r.FormValue("original_content"))
+	originalPriority, _ := strconv.Atoi(r.FormValue("original_priority"))
+
 	name = normalizeRecordName(name, zoneID)
 
 	if err := validators.ValidateRecordType(recordType); err != nil {
@@ -237,19 +267,38 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
+	allRecords, err := h.PDNS.ListRecords(r.Context(), zoneID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch existing records"})
+		return
+	}
+
+	var existingRRSet *models.RRSet
+	for _, rr := range allRecords {
+		if rr.Name == name && rr.Type == recordType {
+			existingRRSet = &rr
+			break
+		}
+	}
+
+	var updatedRecords []models.RecordInfo
+	if existingRRSet != nil {
+		updatedRecords = mergeRecordIntoRRSet(existingRRSet.Records, originalContent, originalPriority,
+			models.RecordInfo{Content: content, Priority: priority, Disabled: disabled})
+	} else {
+		updatedRecords = []models.RecordInfo{{Content: content, Priority: priority, Disabled: disabled}}
+	}
+
+	for i := range updatedRecords {
+		updatedRecords[i].Content, updatedRecords[i].Priority =
+			prepareRecordContent(recordType, updatedRecords[i].Content, updatedRecords[i].Priority)
+	}
 
 	rrset := models.RRSet{
-		Name: name,
-		Type: recordType,
-		TTL:  ttl,
-		Records: []models.RecordInfo{
-			{
-				Content:  recordContent,
-				Priority: recordPriority,
-				Disabled: disabled,
-			},
-		},
+		Name:    name,
+		Type:    recordType,
+		TTL:     ttl,
+		Records: updatedRecords,
 	}
 
 	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
@@ -401,6 +450,21 @@ func prepareRecordContent(recordType, content string, priority int) (string, int
 		}
 	}
 	return fmt.Sprintf("%d %s", priority, content), 0
+}
+
+// mergeRecordIntoRRSet replaces the record matching originalContent+originalPriority
+// with replacement. If no match is found, replacement is appended.
+func mergeRecordIntoRRSet(existing []models.RecordInfo, originalContent string, originalPriority int, replacement models.RecordInfo) []models.RecordInfo {
+	result := make([]models.RecordInfo, len(existing))
+	copy(result, existing)
+	for i, r := range result {
+		if r.Content == originalContent && r.Priority == originalPriority {
+			result[i] = replacement
+			return result
+		}
+	}
+	result = append(result, replacement)
+	return result
 }
 
 // normalizeRecordName ensures a user-supplied record name is fully qualified
