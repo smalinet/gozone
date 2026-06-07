@@ -444,7 +444,7 @@ func TestBatchCreateRecords_MX(t *testing.T) {
 		t.Fatalf("expected 1 rrset, got %d", len(body.RRSets))
 	}
 	rs := body.RRSets[0]
-	if rs.Name != "mail" || rs.Type != "MX" {
+	if rs.Name != "mail.example.com." || rs.Type != "MX" {
 		t.Errorf("unexpected rrset: name=%s type=%s", rs.Name, rs.Type)
 	}
 	if rs.TTL != 600 {
@@ -561,7 +561,7 @@ func TestBatchCreateRecords_EmptyRecords(t *testing.T) {
 	}
 }
 
-func TestPrepareMXSRVContent(t *testing.T) {
+func TestPrepareRecordContent(t *testing.T) {
 	tests := []struct {
 		name          string
 		recordType    string
@@ -583,13 +583,22 @@ func TestPrepareMXSRVContent(t *testing.T) {
 		// Non-MX/SRV: pass through unchanged
 		{"A", "A", "192.0.2.1", 0, "192.0.2.1", 0},
 		{"CNAME", "CNAME", "target.example.com.", 0, "target.example.com.", 0},
-		{"TXT", "TXT", "\"v=spf1 -all\"", 0, "\"v=spf1 -all\"", 0},
+		// TXT: already quoted — pass through unchanged
+		{"TXT_quoted", "TXT", "\"v=spf1 -all\"", 0, "\"v=spf1 -all\"", 0},
+		// TXT: unquoted — add surrounding quotes
+		{"TXT_unquoted", "TXT", "v=spf1 -all", 0, "\"v=spf1 -all\"", 0},
+		// SPF: unquoted — add surrounding quotes
+		{"SPF_unquoted", "SPF", "v=spf1 -all", 0, "\"v=spf1 -all\"", 0},
+		// SPF: already quoted — pass through
+		{"SPF_quoted", "SPF", "\"v=spf1 -all\"", 0, "\"v=spf1 -all\"", 0},
+		// TXT: empty — no quoting
+		{"TXT_empty", "TXT", "", 0, "", 0},
 		{"NS", "NS", "ns1.example.com.", 0, "ns1.example.com.", 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotContent, gotPrio := prepareMXSRVContent(tt.recordType, tt.content, tt.priority)
+			gotContent, gotPrio := prepareRecordContent(tt.recordType, tt.content, tt.priority)
 			if gotContent != tt.wantContent {
 				t.Errorf("content = %q, want %q", gotContent, tt.wantContent)
 			}
@@ -605,17 +614,18 @@ func TestNormalizeRecordName(t *testing.T) {
 	tests := []struct {
 		name, zoneName, want string
 	}{
-		{"www", zone, "www"},
+		{"www", zone, "www.example.com."},
 		{"@", zone, "example.com."},
 		{"", zone, "example.com."},
 		{"example.com.", zone, "example.com."},
 		{"example.com", zone, "example.com."},
 		{"EXAMPLE.COM.", zone, "example.com."},
-		{"www.example.com.", zone, "www"},
-		{"www.example.com", zone, "www"},
-		{"mail.example.com.", zone, "mail"},
+		{"www.example.com.", zone, "www.example.com."},
+		{"www.example.com", zone, "www.example.com."},
+		{"mail.example.com.", zone, "mail.example.com."},
 		{"other.com.", zone, "other.com."},
-		{"other.com", zone, "other.com"},
+		{"other.com", zone, "other.com.example.com."},
+		{"localhost", zone, "localhost.example.com."},
 	}
 
 	for _, tc := range tests {

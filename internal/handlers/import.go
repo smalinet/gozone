@@ -440,6 +440,10 @@ func parseCSVZone(reader *csv.Reader) ([]models.RRSet, error) {
 		csvPriority := 0
 		if rtype == "MX" || rtype == "SRV" {
 			csvContent = fmt.Sprintf("%d %s", priority, content)
+		} else if (rtype == "TXT" || rtype == "SPF") && content != "" {
+			if !strings.HasPrefix(content, `"`) && !strings.HasPrefix(content, `'`) {
+				csvContent = `"` + content + `"`
+			}
 		}
 
 		k := key{name, rtype}

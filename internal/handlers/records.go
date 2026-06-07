@@ -73,7 +73,7 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
+	recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
 
 	rrset := models.RRSet{
 		Name: name,
@@ -179,7 +179,7 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
+	recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
 
 	rrset := models.RRSet{
 		Name: name,
@@ -237,7 +237,7 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
+	recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
 
 	rrset := models.RRSet{
 		Name: name,
@@ -334,7 +334,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		recordContent, recordPriority := prepareMXSRVContent(recordType, content, priority)
+		recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
 
 		rrsets = append(rrsets, models.RRSet{
 			Name: name,
@@ -370,14 +370,19 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
 }
 
-// prepareMXSRVContent embeds priority in the content field for MX and SRV records.
-// It strips any existing priority prefix from content first when the token count
-// indicates the content was read from PowerDNS (which stores priority directly in
-// the content field). For MX: 2+ tokens with leading number = PDNS read path.
-// For SRV: 4+ tokens with leading number = PDNS read path (priority weight port target).
-// Always returns 0 for the RecordInfo priority because PowerDNS rejects the
-// "priority" element in record PATCH body.
-func prepareMXSRVContent(recordType, content string, priority int) (string, int) {
+// prepareRecordContent normalises record content for the PDNS PATCH API.
+// For MX/SRV: embeds priority in content, stripping any existing priority prefix
+// from PDNS read-path data first. Returns 0 for RecordInfo.Priority because
+// PDNS rejects the "priority" element in the PATCH body.
+// For TXT/SPF: PDNS stores content with surrounding double quotes; adds them
+// if the content is not already quoted.
+func prepareRecordContent(recordType, content string, priority int) (string, int) {
+	if recordType == "TXT" || recordType == "SPF" {
+		if content != "" && !strings.HasPrefix(content, `"`) && !strings.HasPrefix(content, `'`) {
+			content = `"` + content + `"`
+		}
+		return content, priority
+	}
 	if recordType != "MX" && recordType != "SRV" {
 		return content, priority
 	}
@@ -398,26 +403,37 @@ func prepareMXSRVContent(recordType, content string, priority int) (string, int)
 	return fmt.Sprintf("%d %s", priority, content), 0
 }
 
-// normalizeRecordName cleans a user-supplied record name for the PDNS PATCH API.
-// PDNS expects names relative to the zone (e.g., "www") or the zone name itself
-// for apex records. Names ending with the zone suffix are stripped back to their
-// relative form. "@" is mapped to the zone name.
+// normalizeRecordName ensures a user-supplied record name is fully qualified
+// with trailing dot for the PDNS PATCH API. PDNS requires canonical names
+// (e.g., "www.example.com."). Names without trailing dot are treated as
+// relative to the zone. "@" is mapped to the zone name.
 func normalizeRecordName(name, zoneName string) string {
 	name = strings.TrimSpace(name)
-	if name == "@" {
-		return zoneName
+	zone := zoneName
+	if !strings.HasSuffix(zone, ".") {
+		zone += "."
 	}
-	zone := strings.TrimSuffix(zoneName, ".")
-	if strings.HasSuffix(name, "."+zone) || strings.HasSuffix(name, "."+zone+".") {
-		name = strings.TrimSuffix(name, "."+zone+".")
-		name = strings.TrimSuffix(name, "."+zone)
-	} else if strings.EqualFold(name, zone) || strings.EqualFold(name, zoneName) {
-		name = zoneName
+	root := strings.TrimSuffix(zone, ".")
+	if name == "@" || name == "" {
+		return zone
 	}
-	if name == "" {
-		return zoneName
+	// Already fully qualified (ends with dot)
+	if strings.HasSuffix(name, ".") {
+		if strings.EqualFold(name, zone) {
+			return zone
+		}
+		return name
 	}
-	return name
+	// Just the zone root (e.g., "example.com")
+	if strings.EqualFold(name, root) {
+		return zone
+	}
+	// Ends with zone suffix without trailing dot (e.g., "www.example.com")
+	if strings.HasSuffix(name, "."+root) {
+		return name + "."
+	}
+	// Bare name — append zone with dot (e.g., "www" -> "www.example.com.")
+	return name + "." + zone
 }
 
 func parseRecordForm(r *http.Request) (name, recordType, content string, ttl, priority int, disabled bool, err error) {

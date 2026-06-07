@@ -204,6 +204,34 @@ $INCLUDE /etc/bind/zones/other.zone
 	}
 }
 
+func TestParseCSVZone_TXT_Quoting(t *testing.T) {
+	input := `name,type,content,ttl,priority,disabled
+txt.example.com.,TXT,v=DMARC1; p=quarantine,3600,0,false
+spf.example.com.,SPF,v=spf1 -all,3600,0,false
+preq.example.com.,TXT,"""already"" quoted",3600,0,false`
+
+	rrsets, err := parseCSVZone(csv.NewReader(strings.NewReader(input)))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(rrsets) != 3 {
+		t.Fatalf("expected 3 rrsets, got %d", len(rrsets))
+	}
+
+	// Unquoted TXT content should be wrapped in quotes for PDNS
+	if rrsets[0].Records[0].Content != `"v=DMARC1; p=quarantine"` {
+		t.Errorf("TXT content = %q, want %q", rrsets[0].Records[0].Content, `"v=DMARC1; p=quarantine"`)
+	}
+	// Unquoted SPF content should be wrapped in quotes
+	if rrsets[1].Records[0].Content != `"v=spf1 -all"` {
+		t.Errorf("SPF content = %q, want %q", rrsets[1].Records[0].Content, `"v=spf1 -all"`)
+	}
+	// Already-quoted TXT should pass through without double-quoting
+	if rrsets[2].Records[0].Content != `"already" quoted` {
+		t.Errorf("TXT pre-quoted content = %q, want %q", rrsets[2].Records[0].Content, `"already" quoted`)
+	}
+}
+
 func TestParseCSVZone(t *testing.T) {
 	input := `name,type,content,ttl,priority,disabled
 @,SOA,"ns1.example.com. hostmaster.example.com. 2024010100 3600 900 1209600 3600",3600,0,false
