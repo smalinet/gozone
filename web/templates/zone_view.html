@@ -13,6 +13,8 @@
             <input type="search" name="search" value="{{.Search}}" placeholder="Filter records..." class="search-input">
         </form>
         <a href="/zones/{{.Zone.ID}}/records/new" class="btn btn-primary">Add Record</a>
+        <a href="/zones/{{.Zone.ID}}/export?format=bind" class="btn btn-secondary">BIND</a>
+        <a href="/zones/{{.Zone.ID}}/export?format=csv" class="btn btn-secondary">CSV</a>
         {{if .IsAdmin}}
         <form method="POST" action="/zones/{{.Zone.ID}}/notify" style="display:inline">
             <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">
@@ -57,6 +59,25 @@
     </form>
 </details>
 {{end}}
+
+<details style="margin-bottom:1rem">
+    <summary style="cursor:pointer;font-weight:600">Import Zone File</summary>
+    <form method="POST" action="/zones/{{.Zone.ID}}/import" enctype="multipart/form-data" style="margin-top:0.5rem">
+        <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">
+        <div class="form-group">
+            <label>Zone File (.zone or .csv)</label>
+            <input type="file" name="zonefile" accept=".zone,.csv,.txt" required>
+        </div>
+        <div class="form-group">
+            <label>Format</label>
+            <select name="format">
+                <option value="bind">BIND zone file</option>
+                <option value="csv">CSV</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Import</button>
+    </form>
+</details>
 
 {{if .Records}}
 <div class="card">

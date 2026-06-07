@@ -56,26 +56,39 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
 
 ## Export / Import
 
-- [ ] **Zone export in BIND format**
-  - Generate RFC 1035-compliant zone file from PowerDNS records
+- [x] **Zone export in BIND format**
+  - Generate RFC 1035-compliant zone file from PowerDNS records — `ExportZone` handler in `internal/handlers/export.go`
   - Include `$ORIGIN`, `$TTL`, and SOA record header
   - Support all record types (A, AAAA, CNAME, MX, NS, PTR, SOA, SRV, TXT, etc.)
   - Download as `.zone` file via button on zone view page
   - Server-side generation in Go (no external tools)
+  - `GET /zones/{zone_id}/export?format=bind`
 
-- [ ] **Import zone from BIND zone file**
-  - Parse RFC 1035 zone file with `$ORIGIN`, `$TTL`, `$INCLUDE` directives
-  - Validate all records before creation
-  - Create new zone or add records to existing zone via PowerDNS API
-  - Drag-and-drop or file picker in WebUI
-  - Support for multi-record RRsets
+- [x] **Zone export in CSV format**
+  - Columns: name, type, content, ttl, priority, disabled
+  - `GET /zones/{zone_id}/export?format=csv`
+  - `Content-Type: text/csv` with Content-Disposition attachment
 
-- [ ] **Export / Import API endpoints**
-  - `GET /api/v1/servers/{server}/zones/{zone}/export?format=bind`
-  - `POST /api/v1/servers/{server}/zones/{zone}/import?format=bind`
-  - `POST /api/v1/servers/{server}/zones/import?format=bind` (create new zone)
-  - Respect zone-level authorization (group access control)
-  - Set appropriate `Content-Type` headers (`text/plain`)
+- [x] **Import zone from BIND zone file**
+  - Parse RFC 1035 zone file with `$ORIGIN`, `$TTL`, `$INCLUDE` directives via `parseBindZone()` in `internal/handlers/import.go`
+  - Handle comments (`;` to EOL), parentheses for multi-line records, relative/absolute names, `@` origin expansion
+  - Quoted TXT records preserved
+  - File upload form on zone view page
+  - Batch-create parsed records via `CreateRecords` PDNS API
+  - `POST /zones/{zone_id}/import`
+
+- [x] **Import zone from CSV file**
+  - Parse CSV with header row: name, type, content, ttl, priority, disabled
+  - Automatic trailing dot normalization on record names
+  - Group records by (name, type) into RRSets before creating
+  - `POST /zones/{zone_id}/import`
+
+- [x] **Export / Import API endpoints**
+  - Export available to all authenticated users with zone access
+  - Import restricted to users with zone access (group authorization)
+  - Respect zone-level authorization via `CheckZoneAccess` middleware
+  - Set appropriate `Content-Type` headers (`text/plain` for BIND, `text/csv` for CSV)
+  - File upload limited to 10MB with `ParseMultipartForm`
 
 ## Zone Templates
 

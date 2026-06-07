@@ -147,6 +147,7 @@ func main() {
 				r.Use(middleware.CheckZoneAccess(db))
 
 				r.Get("/zones/{zone_id}", h.ViewZone)
+			r.Get("/zones/{zone_id}/export", h.ExportZone)
 			r.Post("/zones/{zone_id}/apply-template", h.ApplyTemplateToZone)
 
 				r.Get("/zones/{zone_id}/records/new", h.CreateRecordPage)
@@ -156,6 +157,7 @@ func main() {
 				r.Post("/zones/{zone_id}/records/update", h.UpdateRecord)
 				r.Post("/zones/{zone_id}/records/inline-update", h.InlineUpdateRecord)
 				r.Post("/zones/{zone_id}/records/delete", h.DeleteRecord)
+			r.Post("/zones/{zone_id}/import", h.ImportZone)
 			})
 
 			// Admin-only routes
@@ -169,8 +171,8 @@ func main() {
 				r.Group(func(r chi.Router) {
 					r.Use(middleware.CheckZoneAccess(db))
 
-					r.Post("/zones/{zone_id}/rectify", h.RectifyZone)
-					r.Post("/zones/{zone_id}/notify", h.NotifyZone)
+				r.Post("/zones/{zone_id}/rectify", h.RectifyZone)
+				r.Post("/zones/{zone_id}/notify", h.NotifyZone)
 				r.Post("/zones/{zone_id}/metadata/create", h.CreateMetadata)
 				r.Post("/zones/{zone_id}/metadata/delete", h.DeleteMetadata)
 

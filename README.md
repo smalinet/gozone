@@ -155,6 +155,8 @@ Each zone page displays:
 - **DNSSEC management** — view, create, activate/deactivate, and delete DNSSEC keys (KSK/ZSK) with algorithm selection and DS record display
 - **Zone metadata** (admin only) — manage ALLOW-AXFR-FROM, ALSO-NOTIFY, SOA-EDIT, NSEC3PARAM, PRESIGNED, and other PowerDNS metadata kinds
 - **Activity logs** — history of changes to the zone
+- **Export** (BIND zone file or CSV) — download all zone records
+- **Import** (BIND or CSV) — upload and batch-create records into an existing zone
 - **Danger zone** (admin only) — delete zone, notify
 
 ### TSIG Keys
@@ -164,6 +166,10 @@ Manage TSIG keys for secured DNS operations (zone transfers, dynamic updates). A
 ### DNSSEC
 
 Admin users can manage DNSSEC for each zone directly from the zone view page. Create KSK (Key Signing Key) and ZSK (Zone Signing Key) pairs with selectable algorithms (RSA/SHA-256, RSA/SHA-512, ECDSA P-256, ECDSA P-384, Ed25519, Ed448). Activate/deactivate keys, view DS records for parent zone configuration, and delete deactivated keys. All operations are logged in the activity feed.
+
+### Export / Import
+
+Export full zone records in RFC 1035 BIND zone file format or CSV with a single click from the zone view page. Import zone data by uploading a `.zone` or `.csv` file — records are parsed and batch-created into the existing zone. Both are restricted to users with group access to the zone.
 
 ### Zone Groups
 
@@ -255,6 +261,8 @@ gozone/
 │   │   ├── tsigkeys.go           # TSIG key management
 │   │   ├── templates.go          # Zone template management
 │   │   ├── dnssec.go             # DNSSEC key management
+│   │   ├── export.go             # Zone export (BIND + CSV)
+│   │   ├── import.go             # Zone import (BIND + CSV)
 │   │   ├── api.go                # REST API handlers
 │   │   ├── api_keys.go           # API key management
 │   │   ├── auth.go               # Login/logout
