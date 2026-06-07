@@ -217,6 +217,13 @@ func (c *cachedClient) invalidateZones() {
 	c.stats.Clear()
 }
 
+// InvalidateZoneCache clears the zone list and zone info caches so the next
+// read fetches fresh data from PowerDNS. Does not clear server or TSIG caches.
+func (c *cachedClient) InvalidateZoneCache(ctx context.Context, zoneID string) {
+	c.zoneList.Clear()
+	c.zoneInfo.Clear()
+}
+
 // --- DNSSEC Cryptokeys (passthrough, not cached) ---
 
 func (c *cachedClient) ListCryptokeys(ctx context.Context, zoneID string) ([]models.Cryptokey, error) {

@@ -281,6 +281,7 @@ func (c *Client) CreateRecords(ctx context.Context, zoneID string, rrsets []mode
 	if len(rrsets) == 0 {
 		return nil
 	}
+
 	for i := range rrsets {
 		rrsets[i].ChangeType = "REPLACE"
 	}
@@ -524,3 +525,6 @@ func (c *Client) DeleteCryptokey(ctx context.Context, zoneID string, keyID int) 
 	}
 	return nil
 }
+
+// InvalidateZoneCache is a no-op on the bare Client (no cache layer).
+func (c *Client) InvalidateZoneCache(ctx context.Context, zoneID string) {}

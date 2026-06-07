@@ -121,3 +121,22 @@ func (h *Handler) DeleteCryptokey(w http.ResponseWriter, r *http.Request) {
 func GetDNSSECAlgorithms() []models.DNSSECAlgorithm {
 	return models.DNSSECAlgorithms()
 }
+
+// ClearZoneCache invalidates the local cache for a zone so the next read
+// fetches fresh data from PowerDNS. Available to any authenticated user
+// with group access to the zone.
+func (h *Handler) ClearZoneCache(w http.ResponseWriter, r *http.Request) {
+	user := middleware.GetUser(r)
+	zoneID := r.PathValue("zone_id")
+
+	h.PDNS.InvalidateZoneCache(r.Context(), zoneID)
+
+	if _, err := h.DB.Exec(
+		"INSERT INTO activity_logs (user_id, zone_id, action, details) VALUES (?, ?, 'clear_zone_cache', ?)",
+		user.ID, zoneID, fmt.Sprintf("Cleared cache for zone %s", zoneID),
+	); err != nil {
+		logger.Error("failed to log clear_zone_cache", "zone_id", zoneID, "error", err)
+	}
+
+	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther) // #nosec G710
+}

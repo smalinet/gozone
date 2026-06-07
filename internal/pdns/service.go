@@ -52,6 +52,9 @@ type ZoneService interface {
 	CreateCryptokey(ctx context.Context, zoneID string, keyType string, active bool, algorithm string) (*models.Cryptokey, error)
 	ToggleCryptokey(ctx context.Context, zoneID string, keyID int, active bool) error
 	DeleteCryptokey(ctx context.Context, zoneID string, keyID int) error
+
+	// Cache
+	InvalidateZoneCache(ctx context.Context, zoneID string)
 }
 
 // Compile-time check that Client implements ZoneService.

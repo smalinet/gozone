@@ -157,7 +157,8 @@ Each zone page displays:
 - **Activity logs** — history of changes to the zone
 - **Export** (BIND zone file or CSV) — download all zone records
 - **Import** (BIND or CSV) — upload and batch-create records into an existing zone
-- **Danger zone** (admin only) — delete zone, notify
+- **Danger zone** (admin only) — delete zone, notify, rectify
+- **Clear cache** — invalidate the local zone list cache for the current zone, available to any user with group access to the zone
 
 ### TSIG Keys
 

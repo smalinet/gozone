@@ -253,3 +253,27 @@ func TestListCryptokeys_Client(t *testing.T) {
 		t.Errorf("expected 2 DS records, got %d", len(keys[0].DS))
 	}
 }
+
+func TestClearZoneCache(t *testing.T) {
+	h, srv := newTestHandlerWithPDNS(t, dnssecHandler())
+	defer srv.Close()
+
+	userID := seedUserWithHash(t, h, "clearcache", "pass", "admin")
+	user := &models.User{ID: userID, Username: "clearcache", Role: "admin"}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com./cache/clear", nil)
+	r.SetPathValue("zone_id", "example.com.")
+	r = withUserContext(r, user)
+	h.ClearZoneCache(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("expected 303, got %d", w.Code)
+	}
+
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='clear_zone_cache'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 activity log entry, got %d", count)
+	}
+}

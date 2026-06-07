@@ -59,6 +59,13 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
    - Rectify button in zone view header (admin-only)
    - Handles rectify failure with error page (no silent inconsistency)
 
+- [x] **Per-zone cache invalidation**
+   - `ClearZoneCache` handler invalidates zone list and zone info caches
+   - Available to any authenticated user with group access to the zone
+   - "Clear Cache" button in zone view header
+   - `InvalidateZoneCache` added to `ZoneService` interface
+   - No-op on bare Client, clears `zoneList` + `zoneInfo` on `cachedClient`
+
 ## Export / Import
 
 - [x] **Zone export in BIND format**

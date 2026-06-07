@@ -15,6 +15,10 @@
         <a href="/zones/{{.Zone.ID}}/records/new" class="btn btn-primary">Add Record</a>
         <a href="/zones/{{.Zone.ID}}/export?format=bind" class="btn btn-secondary">BIND</a>
         <a href="/zones/{{.Zone.ID}}/export?format=csv" class="btn btn-secondary">CSV</a>
+        <form method="POST" action="/zones/{{.Zone.ID}}/cache/clear" style="display:inline">
+            <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">
+            <button type="submit" class="btn btn-secondary">Clear Cache</button>
+        </form>
         {{if .IsAdmin}}
         <form method="POST" action="/zones/{{.Zone.ID}}/rectify" style="display:inline">
             <input type="hidden" name="gorilla.csrf.Token" value="{{ $.CSRFToken }}">

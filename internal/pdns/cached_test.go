@@ -254,3 +254,39 @@ func TestCached_UncachedPassthrough(t *testing.T) {
 		t.Errorf("expected 1 record create call, got %d", recordCalls.Load())
 	}
 }
+
+func TestCachedInvalidateZoneCache(t *testing.T) {
+	var listCalls atomic.Int64
+	cached := newCachedClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/zones") {
+			listCalls.Add(1)
+			w.Write([]byte(`[{"id":"z1.","name":"z1.","kind":"Native","serial":0}]`))
+			return
+		}
+		w.Write([]byte(`[]`))
+	})
+
+	ctx := context.Background()
+
+	// Populate caches
+	cached.ListZones(ctx)
+	cached.ListZonesWithInfo(ctx)
+	if listCalls.Load() != 2 {
+		t.Fatalf("expected 2 list calls to populate caches, got %d", listCalls.Load())
+	}
+
+	// Verify cache hit — no new call
+	cached.ListZones(ctx)
+	if listCalls.Load() != 2 {
+		t.Errorf("expected cache hit, got %d calls", listCalls.Load())
+	}
+
+	// Invalidate and verify next reads are fresh
+	cached.InvalidateZoneCache(ctx, "z1.")
+	cached.ListZones(ctx)
+	cached.ListZonesWithInfo(ctx)
+	if listCalls.Load() != 4 {
+		t.Errorf("expected 4 list calls after invalidation, got %d", listCalls.Load())
+	}
+}
