@@ -855,3 +855,115 @@ func TestViewZone_RecordsSearch(t *testing.T) {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
 }
+
+func TestViewZone_SearchAt(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		path := r.URL.Path
+		if strings.HasSuffix(path, "/metadata") {
+			w.Write([]byte(`[]`))
+			return
+		}
+		if strings.HasSuffix(path, "/cryptokeys") {
+			w.Write([]byte(`[]`))
+			return
+		}
+		if strings.Contains(path, "/servers/localhost") && !strings.Contains(path, "/zones/") {
+			w.Write([]byte(`{"id":"localhost","type":"Server","version":"4.9.0"}`))
+			return
+		}
+		w.Write([]byte(`{
+			"id":"example.com.","name":"example.com.","kind":"Native","serial":2024010100,
+			"rrsets":[
+				{"name":"example.com.","type":"SOA","ttl":3600,"records":[{"content":"ns1.example.com. hostmaster.example.com. 1 10800 3600 604800 3600","disabled":false}]},
+				{"name":"example.com.","type":"NS","ttl":3600,"records":[{"content":"ns1.example.com.","disabled":false}]},
+				{"name":"example.com.","type":"A","ttl":300,"records":[{"content":"192.0.2.1","disabled":false}]},
+				{"name":"www.example.com.","type":"A","ttl":300,"records":[{"content":"192.0.2.2","disabled":false}]}
+			]
+		}`))
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com.?search=@", nil)
+	r.SetPathValue("zone_id", "example.com.")
+	r = r.WithContext(ctx)
+	h.ViewZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "192.0.2.1") {
+		t.Error("@ search should return apex A record content")
+	}
+	if strings.Contains(body, "192.0.2.2") {
+		t.Error("@ search should not return www subdomain records")
+	}
+}
+
+func TestViewZone_SortOrder(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		path := r.URL.Path
+		if strings.HasSuffix(path, "/metadata") {
+			w.Write([]byte(`[]`))
+			return
+		}
+		if strings.HasSuffix(path, "/cryptokeys") {
+			w.Write([]byte(`[]`))
+			return
+		}
+		if strings.Contains(path, "/servers/localhost") && !strings.Contains(path, "/zones/") {
+			w.Write([]byte(`{"id":"localhost","type":"Server","version":"4.9.0"}`))
+			return
+		}
+		w.Write([]byte(`{
+			"id":"example.com.","name":"example.com.","kind":"Native","serial":2024010100,
+			"rrsets":[
+				{"name":"www.example.com.","type":"A","ttl":300,"records":[{"content":"192.0.2.2","disabled":false}]},
+				{"name":"example.com.","type":"NS","ttl":3600,"records":[{"content":"ns2.example.com.","disabled":false}]},
+				{"name":"example.com.","type":"MX","ttl":600,"records":[{"content":"mx.example.com.","priority":10,"disabled":false}]},
+				{"name":"example.com.","type":"SOA","ttl":3600,"records":[{"content":"ns1.example.com. hostmaster.example.com. 1 10800 3600 604800 3600","disabled":false}]},
+				{"name":"admin.example.com.","type":"A","ttl":300,"records":[{"content":"192.0.2.3","disabled":false}]}
+			]
+		}`))
+	})
+	defer pdnsSrv.Close()
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/zones/example.com.", nil)
+	r.SetPathValue("zone_id", "example.com.")
+	r = r.WithContext(ctx)
+	h.ViewZone(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+
+	soaIdx := strings.Index(body, "hostmaster.example.com.")
+	nsIdx := strings.Index(body, "ns2.example.com.")
+	mxIdx := strings.Index(body, "mx.example.com.")
+	wwwIdx := strings.Index(body, "192.0.2.2")
+	adminIdx := strings.Index(body, "192.0.2.3")
+
+	if soaIdx < 0 || nsIdx < 0 || mxIdx < 0 || wwwIdx < 0 || adminIdx < 0 {
+		t.Fatal("some expected records missing from output")
+	}
+
+	if soaIdx > nsIdx {
+		t.Error("SOA should appear before NS")
+	}
+	if mxIdx > adminIdx {
+		t.Error("apex MX should appear before admin/www (alpha subdomains)")
+	}
+}

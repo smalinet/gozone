@@ -32,7 +32,7 @@ func newTestHandler(t *testing.T) *Handler {
 		{{define "dashboard.html"}}Dashboard{{end}}
 		{{define "zones.html"}}Zones{{end}}
 		{{define "zone_create.html"}}Create Zone{{end}}
-		{{define "zone_view.html"}}View Zone{{end}}
+		{{define "zone_view.html"}}View Zone: {{.Zone.Name}} Records: {{range .Records}}{{range .Records}}{{.Content}} {{end}}{{end}}{{end}}
 		{{define "record_create.html"}}Create Record{{end}}
 		{{define "record_edit.html"}}Edit Record{{end}}
 		{{define "users.html"}}Users{{end}}
@@ -67,7 +67,7 @@ func newTestHandlerWithPDNS(t *testing.T, handler testutil.PDNSHandlerFunc) (*Ha
 		{{define "dashboard.html"}}Dashboard{{end}}
 		{{define "zones.html"}}Zones{{end}}
 		{{define "zone_create.html"}}Create Zone{{end}}
-		{{define "zone_view.html"}}View Zone{{end}}
+		{{define "zone_view.html"}}View Zone: {{.Zone.Name}} Records: {{range .Records}}{{range .Records}}{{.Content}} {{end}}{{end}}{{end}}
 		{{define "record_create.html"}}Create Record{{end}}
 		{{define "record_edit.html"}}Edit Record{{end}}
 		{{define "users.html"}}Users{{end}}

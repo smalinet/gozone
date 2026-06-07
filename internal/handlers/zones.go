@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -265,11 +266,20 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if search != "" {
 		searchLower := strings.ToLower(search)
+		searchIsAt := search == "@"
 		var filtered []models.RRSet
 		for _, rrset := range records {
-			if strings.Contains(strings.ToLower(rrset.Name), searchLower) ||
-				strings.Contains(strings.ToLower(rrset.Type), searchLower) {
+			nameLower := strings.ToLower(rrset.Name)
+			if searchIsAt && nameLower == strings.ToLower(zone.Name) {
 				filtered = append(filtered, rrset)
+				continue
+			}
+			if !searchIsAt && (strings.Contains(nameLower, searchLower) ||
+				strings.Contains(strings.ToLower(rrset.Type), searchLower)) {
+				filtered = append(filtered, rrset)
+				continue
+			}
+			if searchIsAt {
 				continue
 			}
 			for _, rec := range rrset.Records {
@@ -281,6 +291,36 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		}
 		records = filtered
 	}
+
+	// Sort records: SOA first, NS second, zone apex next, then alpha by name+type.
+	sort.SliceStable(records, func(i, j int) bool {
+		a, b := records[i], records[j]
+
+		if a.Type == "SOA" {
+			return true
+		}
+		if b.Type == "SOA" {
+			return false
+		}
+		if a.Type == "NS" {
+			return true
+		}
+		if b.Type == "NS" {
+			return false
+		}
+		aIsApex := a.Name == zone.Name
+		bIsApex := b.Name == zone.Name
+		if aIsApex && !bIsApex {
+			return true
+		}
+		if !aIsApex && bIsApex {
+			return false
+		}
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+		return a.Type < b.Type
+	})
 
 	recordPage, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	recordPerPage := 10
