@@ -732,6 +732,17 @@ details summary {
     vertical-align: top;
 }
 
+.records-table .col-name {
+    min-width: 10rem;
+    max-width: 18rem;
+    white-space: nowrap;
+}
+
+.records-table .col-prio {
+    white-space: nowrap;
+    width: 1%;
+}
+
 .form-actions {
     display: flex;
     gap: 0.5rem;

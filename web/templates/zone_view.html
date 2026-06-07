@@ -31,11 +31,11 @@
     <table class="table records-table">
         <thead>
             <tr>
-                <th>Name</th>
+                <th class="col-name">Name</th>
                 <th>Type</th>
                 <th>TTL</th>
                 <th>Content</th>
-                <th>Prio</th>
+                <th class="col-prio">Prio</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -48,7 +48,7 @@
             {{$rrset := .}}
             {{range .Records}}
             <tr data-name="{{$rrset.Name}}" data-type="{{$rrset.Type}}" data-disabled="{{.Disabled}}">
-                <td><span class="rv rv-name">{{relativeName $rrset.Name $zoneName}}</span><span class="ev ev-name" style="display:none">{{$rrset.Name}}</span></td>
+                <td class="col-name"><span class="rv rv-name">{{relativeName $rrset.Name $zoneName}}</span><span class="ev ev-name" style="display:none">{{$rrset.Name}}</span></td>
                 <td class="nowrap"><span class="badge badge-type badge-type-{{$rrset.Type}}">{{$rrset.Type}}</span></td>
                 <td class="nowrap">
                     <span class="rv rv-ttl">{{$rrset.TTL}}</span>
@@ -58,7 +58,7 @@
                     <span class="rv rv-content">{{.Content}}</span>
                     <textarea class="ev ev-content" style="display:none" rows="2">{{.Content}}</textarea>
                 </td>
-                <td class="nowrap">
+                <td class="col-prio">
                     <span class="rv rv-prio">{{if .Priority}}{{.Priority}}{{else}}-{{end}}</span>
                     <input type="number" class="ev ev-prio form-control-inline" style="display:none" value="{{if .Priority}}{{.Priority}}{{else}}0{{end}}" min="0">
                 </td>
