@@ -13,6 +13,12 @@ import (
 )
 
 // ImportZone handles file upload for zone import (BIND or CSV).
+//
+// Uses PowerDNS REPLACE semantics via CreateRecords: each name+type pair
+// in the imported file replaces the existing RRSet if present, or creates
+// it if absent. Records not in the import file are untouched. Within the
+// same name+type, the import replaces the entire set of records — any
+// extra existing records with that name+type are removed.
 func (h *Handler) ImportZone(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 
