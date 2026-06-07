@@ -7,6 +7,8 @@ import (
 
 func TestCache_SetGet(t *testing.T) {
 	c := New[string](5 * time.Second)
+	defer c.Stop()
+
 	c.Set("k1", "hello")
 
 	v, ok := c.Get("k1")
@@ -20,6 +22,8 @@ func TestCache_SetGet(t *testing.T) {
 
 func TestCache_GetMissing(t *testing.T) {
 	c := New[string](5 * time.Second)
+	defer c.Stop()
+
 	_, ok := c.Get("nonexistent")
 	if ok {
 		t.Error("expected missing key to return false")
@@ -28,6 +32,8 @@ func TestCache_GetMissing(t *testing.T) {
 
 func TestCache_Expiry(t *testing.T) {
 	c := New[string](10 * time.Millisecond)
+	defer c.Stop()
+
 	c.Set("k1", "hello")
 	time.Sleep(15 * time.Millisecond)
 
@@ -37,8 +43,28 @@ func TestCache_Expiry(t *testing.T) {
 	}
 }
 
+func TestCache_LenExpired(t *testing.T) {
+	c := New[string](10 * time.Millisecond)
+	defer c.Stop()
+
+	c.Set("k1", "hello")
+	c.Set("k2", "world")
+
+	if c.Len() != 2 {
+		t.Fatalf("expected 2 items, got %d", c.Len())
+	}
+
+	time.Sleep(15 * time.Millisecond)
+
+	if c.Len() != 0 {
+		t.Errorf("expected 0 non-expired items after expiry, got %d", c.Len())
+	}
+}
+
 func TestCache_Delete(t *testing.T) {
 	c := New[string](5 * time.Second)
+	defer c.Stop()
+
 	c.Set("k1", "hello")
 	c.Delete("k1")
 
@@ -50,6 +76,8 @@ func TestCache_Delete(t *testing.T) {
 
 func TestCache_Clear(t *testing.T) {
 	c := New[int](5 * time.Second)
+	defer c.Stop()
+
 	c.Set("a", 1)
 	c.Set("b", 2)
 	c.Set("c", 3)
@@ -67,6 +95,8 @@ func TestCache_Clear(t *testing.T) {
 
 func TestCache_Concurrent(t *testing.T) {
 	c := New[int](5 * time.Second)
+	defer c.Stop()
+
 	done := make(chan struct{})
 
 	go func() {
@@ -89,6 +119,8 @@ func TestCache_Concurrent(t *testing.T) {
 
 func TestCache_GenericTypes(t *testing.T) {
 	intCache := New[int](5 * time.Second)
+	defer intCache.Stop()
+
 	intCache.Set("n", 42)
 	v1, ok1 := intCache.Get("n")
 	if !ok1 || v1 != 42 {
@@ -96,6 +128,8 @@ func TestCache_GenericTypes(t *testing.T) {
 	}
 
 	strCache := New[string](5 * time.Second)
+	defer strCache.Stop()
+
 	strCache.Set("s", "test")
 	v2, ok2 := strCache.Get("s")
 	if !ok2 || v2 != "test" {
@@ -103,9 +137,40 @@ func TestCache_GenericTypes(t *testing.T) {
 	}
 
 	sliceCache := New[[]int](5 * time.Second)
+	defer sliceCache.Stop()
+
 	sliceCache.Set("sl", []int{1, 2, 3})
 	v3, ok3 := sliceCache.Get("sl")
 	if !ok3 || len(v3) != 3 {
 		t.Errorf("slice cache: got %v, %v, want [1 2 3], true", v3, ok3)
+	}
+}
+
+func TestCache_Sweep(t *testing.T) {
+	c := New[string](50 * time.Millisecond)
+	defer c.Stop()
+
+	c.Set("k1", "a")
+	c.Set("k2", "b")
+
+	if c.Len() != 2 {
+		t.Fatalf("expected 2 items, got %d", c.Len())
+	}
+
+	time.Sleep(120 * time.Millisecond)
+
+	if c.Len() != 0 {
+		t.Errorf("expected 0 after sweep, got %d", c.Len())
+	}
+}
+
+func TestCache_Stop(t *testing.T) {
+	c := New[string](5 * time.Second)
+	c.Stop()
+
+	c.Set("k1", "hello")
+	v, ok := c.Get("k1")
+	if !ok || v != "hello" {
+		t.Errorf("expected cache to still work after Stop, got %v, %v", v, ok)
 	}
 }
