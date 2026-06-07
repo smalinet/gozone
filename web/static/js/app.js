@@ -130,7 +130,15 @@ function addRecordRow() {
     var rows = container.querySelectorAll('.record-row');
     var template = rows[0].cloneNode(true);
     var inputs = template.querySelectorAll('input[type=text], input[type=number]');
-    for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
+    for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].name === 'ttl') {
+            inputs[i].value = '3600';
+        } else if (inputs[i].name === 'priority') {
+            inputs[i].value = '0';
+        } else {
+            inputs[i].value = '';
+        }
+    }
     var select = template.querySelector('select[name=type]');
     if (select) select.value = select.querySelector('option').value;
     var prioGrp = template.querySelector('.record-prio-group');

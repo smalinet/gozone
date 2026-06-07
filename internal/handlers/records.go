@@ -294,6 +294,7 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	names := r.PostForm["name"]
 	types := r.PostForm["type"]
 	contents := r.PostForm["content"]
+	ttls := r.PostForm["ttl"]
 	priorities := r.PostForm["priority"]
 
 	if len(names) == 0 || len(types) == 0 || len(contents) == 0 {
@@ -319,6 +320,11 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		}
 
 		ttl := 3600
+		if i < len(ttls) {
+			if t, err := strconv.Atoi(strings.TrimSpace(ttls[i])); err == nil && t > 0 {
+				ttl = t
+			}
+		}
 		priority := 0
 		if i < len(priorities) {
 			if p, err := strconv.Atoi(strings.TrimSpace(priorities[i])); err == nil && p > 0 {
