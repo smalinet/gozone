@@ -110,7 +110,7 @@ func (h *Handler) CreateZonePage(w http.ResponseWriter, r *http.Request) {
 		"Title":        "Create Zone - GoZone",
 		"User":         user,
 		"DNSTypes":     []string{"Native", "Master", "Slave"},
-		"Templates":     templates,
+		"Templates":    templates,
 		"TemplateVars": TemplateVariables,
 	}
 	h.render(w, r, "zone_create.html", data)
@@ -293,7 +293,6 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 
 	logs := h.getZoneActivityLogs(zoneID)
 	templates, _ := h.getAllTemplates()
-
 
 	pdnsVersion := "unknown"
 	if srv != nil {

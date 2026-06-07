@@ -154,7 +154,7 @@ func (h *Handler) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-// #nosec G710 -- templateIDStr from chi r.PathValue, controlled by route pattern
+	// #nosec G710 -- templateIDStr from chi r.PathValue, controlled by route pattern
 	http.Redirect(w, r, "/templates/"+templateIDStr+"/edit", http.StatusSeeOther)
 }
 
@@ -369,9 +369,9 @@ func parseTemplateRecordForm(r *http.Request, templateIDStr string) models.ZoneT
 // SeedBuiltinTemplates creates the built-in zone templates if they don't exist.
 func (h *Handler) SeedBuiltinTemplates() error {
 	builtins := []struct {
-		name     string
-		desc     string
-		records  []models.ZoneTemplateRecord
+		name    string
+		desc    string
+		records []models.ZoneTemplateRecord
 	}{
 		{
 			name: "standard",
@@ -392,7 +392,7 @@ func (h *Handler) SeedBuiltinTemplates() error {
 				{Name: "@", Type: "MX", Content: "{{MX_HOST}}", TTL: 3600, Priority: 10},
 				{Name: "@", Type: "TXT", Content: "v=spf1 mx ~all", TTL: 3600},
 				{Name: "*._domainkey", Type: "TXT", Content: "v=DKIM1; k=rsa; p=REPLACE_WITH_PUBLIC_KEY", TTL: 3600},
-			{Name: "_dmarc", Type: "TXT", Content: "v=DMARC1; p=none; rua=mailto:dmarc@{{ZONE}}", TTL: 3600},
+				{Name: "_dmarc", Type: "TXT", Content: "v=DMARC1; p=none; rua=mailto:dmarc@{{ZONE}}", TTL: 3600},
 			},
 		},
 		{
