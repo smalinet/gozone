@@ -164,6 +164,10 @@ Manage TSIG keys for secured DNS operations (zone transfers, dynamic updates). A
 
 Admin users can create groups, assign zones to groups, and add users as members. Non-admin users only see zones assigned to groups they belong to. The "Groups" link is visible in the sidebar for admin users.
 
+### Zone Templates
+
+Admin users can define reusable DNS record templates that pre-populate records when creating new zones or applying to existing zones. Templates support variable substitution (`IP`, `IP6`, `MX_HOST`, `TTL`, `ZONE`, etc.) and include four built-in templates (standard, mail, web, redirect). Accessible under the Templates menu in the sidebar for admin users.
+
 ### API Keys
 
 Users can generate personal API keys for programmatic access. Keys are SHA-256 hashed before storage — the raw key is shown only once at creation time.
@@ -244,6 +248,7 @@ gozone/
 │   │   ├── users.go              # User management
 │   │   ├── groups.go             # Zone group authorization
 │   │   ├── tsigkeys.go           # TSIG key management
+│   │   ├── templates.go           # Zone template management
 │   │   ├── api.go                # REST API handlers
 │   │   ├── api_keys.go           # API key management
 │   │   ├── auth.go               # Login/logout
@@ -270,6 +275,8 @@ gozone/
 │   │   ├── tsigkeys.html         # TSIG key list
 │   │   ├── tsigkey_create.html   # TSIG key creation
 │   │   ├── tsigkey_edit.html     # TSIG key edit
+│   │   ├── templates.html        # Template list
+│   │   ├── template_edit.html    # Template editor with records
 │   │   ├── users.html            # User list
 │   │   ├── profile.html          # User profile
 │   │   └── ...

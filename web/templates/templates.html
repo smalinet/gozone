@@ -1,0 +1,51 @@
+{{define "templates.html"}}
+{{template "head" .}}
+<div class="app-layout">
+    {{template "sidebar" .}}
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Templates</h2>
+                <a href="/templates/new" class="btn btn-primary">New Template</a>
+            </div>
+
+            {{if .Templates}}
+            <div class="card">
+                <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr><th>Name</th><th>Description</th><th>Built-in</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        {{range .Templates}}
+                        <tr>
+                            <td><strong><a href="/templates/{{.ID}}/edit">{{.Name}}</a></strong></td>
+                            <td>{{.Description}}</td>
+                            <td>{{if .IsBuiltin}}<span class="badge badge-active">Built-in</span>{{else}}-{{end}}</td>
+                            <td class="actions-cell">
+                                <a href="/templates/{{.ID}}/edit" class="btn btn-sm btn-secondary">Edit</a>
+                                {{if not .IsBuiltin}}
+                                <form method="POST" action="/templates/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete template {{.Name}}?')">
+                                    <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFToken}}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {{else}}
+            <div class="empty-state">
+                <h3>No templates</h3>
+                <p>Create a template to pre-fill records when creating new zones.</p>
+                <a href="/templates/new" class="btn btn-primary">New Template</a>
+            </div>
+            {{end}}
+        </div>
+    </main>
+</div>
+{{template "tail" .}}
+{{end}}

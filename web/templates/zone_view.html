@@ -29,6 +29,35 @@
     {{if .Zone.Account}}<span>Account: <strong>{{.Zone.Account}}</strong></span>{{end}}
 </div>
 
+{{if .Templates}}
+<details style="margin-bottom:1rem">
+    <summary style="cursor:pointer;font-weight:600">Apply Template</summary>
+    <form method="POST" action="/zones/{{.Zone.ID}}/apply-template" style="margin-top:0.75rem;padding:1rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)">
+        <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
+        <div class="form-row" style="margin-bottom:1rem">
+            <div class="form-group" style="flex:1">
+                <label for="apply_template_id">Template</label>
+                <select id="apply_template_id" name="template_id" class="form-control" onchange="toggleApplyVars(this.value)">
+                    <option value="">Select a template...</option>
+                    {{range .Templates}}
+                    <option value="{{.ID}}">{{.Name}} — {{.Description}}</option>
+                    {{end}}
+                </select>
+            </div>
+        </div>
+        <div id="apply-template-vars" style="display:none">
+            {{range $.TemplateVars}}
+            <div class="form-group">
+                <label for="apply_var_{{.}}"><code>{{.}}</code></label>
+                <input type="text" id="apply_var_{{.}}" name="var_{{.}}" class="form-control" placeholder="Value for {{.}}">
+            </div>
+            {{end}}
+        </div>
+        <button type="submit" class="btn btn-primary">Apply</button>
+    </form>
+</details>
+{{end}}
+
 {{if .Records}}
 <div class="card">
     <div class="table-responsive">
@@ -220,6 +249,11 @@
 {{end}}
         </div>
     </main>
-</div>
+ </div>
+<script>
+function toggleApplyVars(val) {
+    document.getElementById('apply-template-vars').style.display = val ? 'block' : 'none';
+}
+</script>
 {{template "tail" .}}
 {{end}}

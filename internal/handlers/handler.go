@@ -55,6 +55,8 @@ func sectionFromTemplate(name string) string {
 		return "apikeys"
 	case name == "tsigkeys", strings.HasPrefix(name, "tsigkey_"):
 		return "tsigkeys"
+	case name == "templates", strings.HasPrefix(name, "template_"):
+		return "templates"
 	}
 	return ""
 }

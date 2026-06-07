@@ -105,10 +105,13 @@ func (h *Handler) ListZones(w http.ResponseWriter, r *http.Request) {
 // CreateZonePage renders the zone creation form (GET /zones/new).
 func (h *Handler) CreateZonePage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
+	templates, _ := h.getAllTemplates()
 	data := map[string]interface{}{
-		"Title":    "Create Zone - GoZone",
-		"User":     user,
-		"DNSTypes": []string{"Native", "Master", "Slave"},
+		"Title":        "Create Zone - GoZone",
+		"User":         user,
+		"DNSTypes":     []string{"Native", "Master", "Slave"},
+		"Templates":     templates,
+		"TemplateVars": TemplateVariables,
 	}
 	h.render(w, r, "zone_create.html", data)
 }
@@ -163,6 +166,23 @@ func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 		user.ID, zone.ID, fmt.Sprintf("Created zone %s (kind: %s)", zone.Name, zone.Kind),
 	); err != nil {
 		logger.Error("failed to log create_zone activity", "zone_id", zone.ID, "error", err)
+	}
+
+	// Apply template if selected
+	if templateIDStr := strings.TrimSpace(r.FormValue("template_id")); templateIDStr != "" {
+		if templateID, err := strconv.ParseInt(templateIDStr, 10, 64); err == nil {
+			records := h.getTemplateRecords(templateID)
+			if len(records) > 0 {
+				vars := h.collectTemplateVars(r)
+				if vars["ZONE"] == "" {
+					vars["ZONE"] = zone.Name
+				}
+				rrsets := h.substituteTemplateRecords(zone.ID, records, vars)
+				if err := h.PDNS.CreateRecords(r.Context(), zone.ID, rrsets); err != nil {
+					logger.Error("failed to apply template records", "zone_id", zone.ID, "error", err)
+				}
+			}
+		}
 	}
 
 	http.Redirect(w, r, "/zones", http.StatusSeeOther)
@@ -269,6 +289,7 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 	paginatedRecords, recordPageInfo := paginate(records, recordPage, recordPerPage)
 
 	logs := h.getZoneActivityLogs(zoneID)
+	templates, _ := h.getAllTemplates()
 
 
 	pdnsVersion := "unknown"
@@ -289,6 +310,8 @@ func (h *Handler) ViewZone(w http.ResponseWriter, r *http.Request) {
 		"RecordTypes":    GetRecordTypes(),
 		"MetaKinds":      GetMetadataKinds(),
 		"IsAdmin":        user.IsAdmin(),
+		"Templates":      templates,
+		"TemplateVars":   TemplateVariables,
 	}
 	h.render(w, r, "zone_view.html", data)
 }

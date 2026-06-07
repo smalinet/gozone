@@ -75,5 +75,24 @@ func (p *postgresDialect) Migrations() []string {
 		`CREATE INDEX IF NOT EXISTS idx_zone_group_members_user ON zone_group_members(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_zone_group_zones_group ON zone_group_zones(group_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_zone_group_zones_zone ON zone_group_zones(zone_id)`,
+		`CREATE TABLE IF NOT EXISTS zone_templates (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			is_builtin SMALLINT NOT NULL DEFAULT 0,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS zone_template_records (
+			id SERIAL PRIMARY KEY,
+			template_id INT NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			type VARCHAR(16) NOT NULL,
+			content TEXT NOT NULL,
+			ttl INT NOT NULL DEFAULT 3600,
+			priority INT NOT NULL DEFAULT 0,
+			disabled SMALLINT NOT NULL DEFAULT 0,
+			FOREIGN KEY (template_id) REFERENCES zone_templates(id) ON DELETE CASCADE
+		)`,
 	}
 }

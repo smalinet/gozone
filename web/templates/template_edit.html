@@ -1,0 +1,126 @@
+{{define "template_edit.html"}}
+{{template "head" .}}
+<div class="app-layout">
+    {{template "sidebar" .}}
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <div>
+                    <a href="/templates" class="breadcrumb">Templates</a> / <h2>{{if .Template.ID}}Edit{{else}}New{{end}} Template</h2>
+                </div>
+            </div>
+
+            <form method="POST" action="{{if .Template.ID}}/templates/{{.Template.ID}}/update{{else}}/templates/create{{end}}" style="margin-bottom:2rem">
+                <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" value="{{.Template.Name}}" required class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" id="description" name="description" value="{{.Template.Description}}" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+                {{if .Template.ID}}
+                <a href="/templates" class="btn btn-secondary">Cancel</a>
+                {{end}}
+            </form>
+
+            {{if .Template.ID}}
+            <div class="card">
+                <h3>Records</h3>
+                {{if .Records}}
+                <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr><th>Name</th><th>Type</th><th>Content</th><th>TTL</th><th>Priority</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        {{range .Records}}
+                        <tr>
+                            <td><code>{{.Name}}</code></td>
+                            <td><span class="badge badge-type badge-type-{{.Type}}">{{.Type}}</span></td>
+                            <td><code>{{.Content}}</code></td>
+                            <td class="nowrap">{{.TTL}}</td>
+                            <td class="nowrap">{{if and (or (eq .Type "MX") (eq .Type "SRV"))}}{{.Priority}}{{else}}-{{end}}</td>
+                            <td class="actions-cell">
+                                <form method="POST" action="/templates/{{$.Template.ID}}/records/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete this record?')">
+                                    <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFToken}}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                </div>
+                {{else}}
+                <p class="empty-state" style="text-align:left">No records yet. Use the form below to add records.</p>
+                {{end}}
+
+                <details style="margin-top:1rem">
+                    <summary style="cursor:pointer;font-weight:600">Add Record</summary>
+                    <form method="POST" action="/templates/{{.Template.ID}}/records/add" style="margin-top:0.75rem">
+                        <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:1">
+                                <label for="name">Name (<code>@</code> for apex)</label>
+                                <input type="text" id="name" name="name" value="@" class="form-control">
+                            </div>
+                            <div class="form-group" style="flex:1">
+                                <label for="type">Type</label>
+                                <select name="type" id="type" class="form-control">
+                                    {{range $.RecordTypes}}
+                                    <option value="{{.}}">{{.}}</option>
+                                    {{end}}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="content">Content (use ZONE, IP, IP6 etc. for substitution)</label>
+                            <input type="text" id="content" name="content" required class="form-control">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ttl">TTL</label>
+                                <input type="number" id="ttl" name="ttl" value="3600" min="0" class="form-control" style="width:8rem">
+                            </div>
+                            <div class="form-group">
+                                <label for="priority">Priority (MX/SRV only)</label>
+                                <input type="number" id="priority" name="priority" value="0" min="0" class="form-control" style="width:8rem">
+                            </div>
+                            <div class="form-group">
+                                <label><input type="checkbox" name="disabled"> Disabled</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Record</button>
+                    </form>
+                </details>
+            </div>
+
+            <div class="card" style="margin-top:2rem">
+                <h3>Template Variables</h3>
+                <p>Use these variables in record content; they will be replaced when applying the template:</p>
+                <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>ZONE</code></td><td>The target zone name (e.g. example.com.)</td></tr>
+                        <tr><td><code>IP</code></td><td>IPv4 address for A records</td></tr>
+                        <tr><td><code>IP6</code></td><td>IPv6 address for AAAA records</td></tr>
+                        <tr><td><code>MX_HOST</code></td><td>Mail server hostname for MX records</td></tr>
+                        <tr><td><code>TTL</code></td><td>Record TTL value</td></tr>
+                        <tr><td><code>REFRESH</code></td><td>SOA refresh interval</td></tr>
+                        <tr><td><code>RETRY</code></td><td>SOA retry interval</td></tr>
+                        <tr><td><code>EXPIRE</code></td><td>SOA expire time</td></tr>
+                        <tr><td><code>MINIMUM</code></td><td>SOA minimum (negative cache) TTL</td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </main>
+</div>
+{{template "tail" .}}
+{{end}}

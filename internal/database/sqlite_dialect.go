@@ -94,5 +94,24 @@ func (s *sqliteDialect) Migrations() []string {
 		`CREATE INDEX IF NOT EXISTS idx_zone_group_members_user ON zone_group_members(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_zone_group_zones_group ON zone_group_zones(group_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_zone_group_zones_zone ON zone_group_zones(zone_id)`,
+		`CREATE TABLE IF NOT EXISTS zone_templates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			is_builtin INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS zone_template_records (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			template_id INTEGER NOT NULL,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			content TEXT NOT NULL,
+			ttl INTEGER NOT NULL DEFAULT 3600,
+			priority INTEGER NOT NULL DEFAULT 0,
+			disabled INTEGER NOT NULL DEFAULT 0,
+			FOREIGN KEY (template_id) REFERENCES zone_templates(id) ON DELETE CASCADE
+		)`,
 	}
 }

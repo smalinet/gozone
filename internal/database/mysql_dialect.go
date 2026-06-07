@@ -77,5 +77,24 @@ func (m *mysqlDialect) Migrations() []string {
 		`CREATE INDEX idx_zone_group_members_user ON zone_group_members(user_id)`,
 		`CREATE INDEX idx_zone_group_zones_group ON zone_group_zones(group_id)`,
 		`CREATE INDEX idx_zone_group_zones_zone ON zone_group_zones(zone_id)`,
+		`CREATE TABLE IF NOT EXISTS zone_templates (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			name VARCHAR(255) NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			is_builtin TINYINT NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+		`CREATE TABLE IF NOT EXISTS zone_template_records (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			template_id INT NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			type VARCHAR(16) NOT NULL,
+			content TEXT NOT NULL,
+			ttl INT NOT NULL DEFAULT 3600,
+			priority INT NOT NULL DEFAULT 0,
+			disabled TINYINT NOT NULL DEFAULT 0,
+			FOREIGN KEY (template_id) REFERENCES zone_templates(id) ON DELETE CASCADE
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
 }

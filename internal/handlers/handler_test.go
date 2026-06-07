@@ -44,6 +44,8 @@ func newTestHandler(t *testing.T) *Handler {
 		{{define "tsigkeys.html"}}TSIG Keys{{end}}
 		{{define "tsigkey_create.html"}}Create TSIG Key{{end}}
 		{{define "tsigkey_edit.html"}}Edit TSIG Key{{end}}
+		{{define "templates.html"}}Templates: {{range .Templates}}{{.Name}} {{end}}{{end}}
+		{{define "template_edit.html"}}TemplateEdit: {{.Template.Name}}{{end}}
 	`))
 
 	return &Handler{
@@ -77,6 +79,8 @@ func newTestHandlerWithPDNS(t *testing.T, handler testutil.PDNSHandlerFunc) (*Ha
 		{{define "tsigkeys.html"}}TSIG Keys{{end}}
 		{{define "tsigkey_create.html"}}Create TSIG Key{{end}}
 		{{define "tsigkey_edit.html"}}Edit TSIG Key{{end}}
+		{{define "templates.html"}}Templates: {{range .Templates}}{{.Name}} {{end}}{{end}}
+		{{define "template_edit.html"}}TemplateEdit: {{.Template.Name}}{{end}}
 	`))
 
 	return &Handler{

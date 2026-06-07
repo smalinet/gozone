@@ -78,26 +78,33 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
 
 ## Zone Templates
 
-- [ ] **Define reusable zone templates**
+- [x] **Define reusable zone templates**
   - Pre-populated record sets for common zone types (standard, mail, web, redirect)
   - Custom templates with user-defined records
-  - Template variables (e.g. `{{IP}}`, `{{MX_HOST}}`, `{{TTL}}`)
-  - Template storage in local database (not PowerDNS)
+  - Template variables (e.g. `{{IP}}`, `{{MX_HOST}}`, `{{TTL}}`, `{{ZONE}}`)
+  - Template storage in local database tables `zone_templates` + `zone_template_records`
+  - Built-in templates seeded on startup: `standard`, `mail`, `web`, `redirect`
 
-- [ ] **Template management UI**
-  - CRUD pages for templates (list, create, edit, delete)
-  - Visual record editor within template
-  - Preview records before applying template
-  - Clone existing zone as new template
+- [x] **Template management UI**
+  - CRUD pages for templates (list, create, edit, delete) at `/templates`
+  - Record editor within template edit page (add/delete records)
+  - Template variables reference table on edit page
+  - Template list shows built-in vs custom templates
 
-- [ ] **Apply template on zone creation**
+- [x] **Apply template on zone creation**
   - Select template from dropdown on zone create page
-  - Replace variables with user-provided values
-  - Batch-create all template records via PowerDNS API
-  - Option to apply template to existing zone
+  - Replace variables with user-provided values (IP, IP6, MX_HOST, etc.)
+  - Batch-create all template records via PowerDNS API after zone creation
+  - Auto-populate `{{ZONE}}` variable with the created zone name
 
-- [ ] **Built-in templates**
-  - `standard` — SOA + NS records only
+- [x] **Apply template to existing zone**
+  - "Apply Template" dropdown on zone view page
+  - Same variable substitution as creation flow
+  - Records are added to the existing zone via `POST /zones/{zone_id}/apply-template`
+  - Route protected by zone-level group authorization
+
+- [x] **Built-in templates**
+  - `standard` — SOA + NS records
   - `mail` — SOA + NS + MX + SPF + DKIM placeholders
   - `web` — SOA + NS + A/AAAA + CNAME www
   - `redirect` — SOA + NS + A + URL redirect record

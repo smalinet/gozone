@@ -73,6 +73,11 @@ func main() {
 	// Create handler
 	h := handlers.New(db, cachedClient, cfg, tmpl)
 
+	// Seed built-in zone templates
+	if err := h.SeedBuiltinTemplates(); err != nil {
+		logger.Fatal("failed to seed builtin templates", "error", err)
+	}
+
 	// Set up router
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -142,6 +147,7 @@ func main() {
 				r.Use(middleware.CheckZoneAccess(db))
 
 				r.Get("/zones/{zone_id}", h.ViewZone)
+			r.Post("/zones/{zone_id}/apply-template", h.ApplyTemplateToZone)
 
 				r.Get("/zones/{zone_id}/records/new", h.CreateRecordPage)
 				r.Post("/zones/{zone_id}/records/create", h.CreateRecord)
@@ -192,8 +198,18 @@ func main() {
 				r.Post("/tsigkeys/create", h.CreateTSIGKey)
 				r.Get("/tsigkeys/{key_id}/edit", h.EditTSIGKeyPage)
 				r.Post("/tsigkeys/{key_id}/update", h.UpdateTSIGKey)
-				r.Post("/tsigkeys/delete", h.DeleteTSIGKey)
-			})
+			r.Post("/tsigkeys/delete", h.DeleteTSIGKey)
+
+			r.Get("/templates", h.ListTemplates)
+			r.Get("/templates/new", h.CreateTemplatePage)
+			r.Post("/templates/create", h.CreateTemplate)
+			r.Get("/templates/{template_id}/edit", h.EditTemplatePage)
+			r.Post("/templates/{template_id}/update", h.UpdateTemplate)
+			r.Post("/templates/{template_id}/delete", h.DeleteTemplate)
+			r.Post("/templates/{template_id}/records/add", h.AddTemplateRecord)
+			r.Post("/templates/{template_id}/records/{record_id}/update", h.UpdateTemplateRecord)
+			r.Post("/templates/{template_id}/records/{record_id}/delete", h.DeleteTemplateRecord)
+		})
 		})
 	})
 
