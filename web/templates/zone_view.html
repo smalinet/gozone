@@ -264,10 +264,12 @@
                         <input type="hidden" name="active" value="{{if .Active}}false{{else}}true{{end}}">
                         <button type="submit" class="btn btn-sm {{if .Active}}btn-secondary{{else}}btn-primary{{end}}">{{if .Active}}Deactivate{{else}}Activate{{end}}</button>
                     </form>
+                    {{if $.IsAdmin}}
                     <form method="POST" action="/zones/{{$zoneID}}/cryptokeys/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete key {{.ID}}?')">
                         <input type="hidden" name="gorilla.csrf.Token" value="{{$.CSRFToken}}">
                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>
+                    {{end}}
                 </td>
             </tr>
             {{end}}
@@ -278,6 +280,7 @@
     <p class="empty-state" style="text-align:left">No DNSSEC keys for this zone.</p>
     {{end}}
 
+    {{if $.IsAdmin}}
     <details style="margin-top:1rem">
         <summary style="cursor:pointer;font-weight:600">Create Key</summary>
         <form method="POST" action="/zones/{{.Zone.ID}}/cryptokeys/create" style="margin-top:0.75rem">
@@ -302,6 +305,7 @@
             <button type="submit" class="btn btn-primary">Create Key</button>
         </form>
     </details>
+    {{end}}
 </div>
 
 {{if .IsAdmin}}
