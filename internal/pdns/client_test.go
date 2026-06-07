@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/babykart/gozone/internal/config"
 	"github.com/babykart/gozone/internal/models"
@@ -40,6 +41,29 @@ func TestNewClient_URLNormalization(t *testing.T) {
 		if c.baseURL != tc.want {
 			t.Errorf("input %q: got %q, want %q", tc.input, c.baseURL, tc.want)
 		}
+	}
+}
+
+func TestNewClient_Transport(t *testing.T) {
+	c := NewClient(&config.PowerDNSConfig{APIURL: "http://pdns.example.com", ServerID: "localhost"})
+	tr, ok := c.http.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("expected *http.Transport on client")
+	}
+	if tr.MaxIdleConns != 100 {
+		t.Errorf("MaxIdleConns: got %d, want 100", tr.MaxIdleConns)
+	}
+	if tr.MaxIdleConnsPerHost != 10 {
+		t.Errorf("MaxIdleConnsPerHost: got %d, want 10", tr.MaxIdleConnsPerHost)
+	}
+	if tr.IdleConnTimeout != 90*time.Second {
+		t.Errorf("IdleConnTimeout: got %v, want 90s", tr.IdleConnTimeout)
+	}
+	if tr.DisableKeepAlives {
+		t.Error("DisableKeepAlives: got true, want false")
+	}
+	if c.http.Timeout != 30*time.Second {
+		t.Errorf("Timeout: got %v, want 30s", c.http.Timeout)
 	}
 }
 

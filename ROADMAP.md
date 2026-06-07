@@ -6,7 +6,7 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
 
 ### HTTP Optimizations
 
-- [ ] **Configure connection pooling for PowerDNS client** (`internal/pdns/client.go`)
+- [x] **Configure connection pooling for PowerDNS client** (`internal/pdns/client.go`)
   ```go
   Transport: &http.Transport{
       MaxIdleConns:        100,

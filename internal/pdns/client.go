@@ -38,12 +38,20 @@ func NewClient(cfg *config.PowerDNSConfig) *Client {
 		baseURL += "/api/v1"
 	}
 
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableKeepAlives:   false,
+	}
+
 	return &Client{
 		baseURL:  baseURL,
 		apiKey:   cfg.APIKey,
 		serverID: cfg.ServerID,
 		http: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 	}
 }
