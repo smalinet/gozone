@@ -57,12 +57,6 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
   - Download as `.zone` file via button on zone view page
   - Server-side generation in Go (no external tools)
 
-- [ ] **Zone export in CSV format**
-  - Export records as comma-separated values (name, type, content, ttl, priority, disabled)
-  - Download as `.csv` file via button on zone view page
-  - UTF-8 with BOM for Excel compatibility
-  - Optional filter by record type
-
 - [ ] **Import zone from BIND zone file**
   - Parse RFC 1035 zone file with `$ORIGIN`, `$TTL`, `$INCLUDE` directives
   - Validate all records before creation
@@ -70,19 +64,12 @@ Remaining tasks to improve the security, quality, and performance of GoZone.
   - Drag-and-drop or file picker in WebUI
   - Support for multi-record RRsets
 
-- [ ] **Import zone from CSV file**
-  - Parse CSV with columns: name, type, content, ttl, priority, disabled
-  - Preview parsed records before import
-  - Create new zone or add records to existing zone
-  - Template download for CSV format reference
-
 - [ ] **Export / Import API endpoints**
   - `GET /api/v1/servers/{server}/zones/{zone}/export?format=bind`
-  - `GET /api/v1/servers/{server}/zones/{zone}/export?format=csv`
-  - `POST /api/v1/servers/{server}/zones/{zone}/import?format=bind|csv`
-  - `POST /api/v1/servers/{server}/zones/import?format=bind|csv` (create new zone)
+  - `POST /api/v1/servers/{server}/zones/{zone}/import?format=bind`
+  - `POST /api/v1/servers/{server}/zones/import?format=bind` (create new zone)
   - Respect zone-level authorization (group access control)
-  - Set appropriate `Content-Type` headers (`text/plain`, `text/csv`)
+  - Set appropriate `Content-Type` headers (`text/plain`)
 
 ## Zone Templates
 
