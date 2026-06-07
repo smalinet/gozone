@@ -343,7 +343,7 @@
         <tbody>
             {{range .Logs}}
             <tr>
-                <td><span class="badge">{{.Action}}</span></td>
+                <td><span class="badge badge-{{.Action}}">{{.Action}}</span></td>
                 <td>{{.Details}}</td>
                 <td>{{.Username}}</td>
                 <td>{{.CreatedAt}}</td>

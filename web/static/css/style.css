@@ -635,6 +635,45 @@ details summary {
     color: var(--text-muted);
 }
 
+.badge-import_zone,
+.badge-create_metadata,
+.badge-apply_template,
+.badge-create_cryptokey,
+.badge-create_user,
+.badge-create_tsigkey,
+.badge-create_api_key {
+    background: #dcfce7;
+    color: var(--success);
+}
+
+.badge-update_record,
+.badge-update_user,
+.badge-update_tsigkey {
+    background: #dbeafe;
+    color: var(--primary);
+}
+
+.badge-delete_metadata,
+.badge-delete_cryptokey,
+.badge-delete_user,
+.badge-delete_tsigkey,
+.badge-delete_api_key {
+    background: #fee2e2;
+    color: var(--danger);
+}
+
+.badge-cryptokey_activate,
+.badge-cryptokey_deactivate,
+.badge-rectify_zone {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.badge-clear_zone_cache {
+    background: #ffedd5;
+    color: var(--warning);
+}
+
 /* Forms */
 .form-group {
     margin-bottom: 1rem;
