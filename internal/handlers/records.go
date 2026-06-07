@@ -61,6 +61,8 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name = normalizeRecordName(name, zoneID)
+
 	if err := validators.ValidateRecordType(recordType); err != nil {
 		h.renderError(w, r, "Invalid record type: "+err.Error())
 		return
@@ -165,6 +167,8 @@ func (h *Handler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name = normalizeRecordName(name, zoneID)
+
 	if err := validators.ValidateRecordType(recordType); err != nil {
 		h.renderError(w, r, "Invalid record type: "+err.Error())
 		return
@@ -220,6 +224,8 @@ func (h *Handler) InlineUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Name, type, and content are required"})
 		return
 	}
+
+	name = normalizeRecordName(name, zoneID)
 
 	if err := validators.ValidateRecordType(recordType); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid record type: " + err.Error()})
@@ -303,6 +309,8 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		if name == "" || recordType == "" || content == "" {
 			continue
 		}
+
+		name = normalizeRecordName(name, zoneID)
 
 		ttl := 3600
 		if i < len(ttls) {
@@ -388,6 +396,28 @@ func prepareMXSRVContent(recordType, content string, priority int) (string, int)
 		}
 	}
 	return fmt.Sprintf("%d %s", priority, content), 0
+}
+
+// normalizeRecordName cleans a user-supplied record name for the PDNS PATCH API.
+// PDNS expects names relative to the zone (e.g., "www") or the zone name itself
+// for apex records. Names ending with the zone suffix are stripped back to their
+// relative form. "@" is mapped to the zone name.
+func normalizeRecordName(name, zoneName string) string {
+	name = strings.TrimSpace(name)
+	if name == "@" {
+		return zoneName
+	}
+	zone := strings.TrimSuffix(zoneName, ".")
+	if strings.HasSuffix(name, "."+zone) || strings.HasSuffix(name, "."+zone+".") {
+		name = strings.TrimSuffix(name, "."+zone+".")
+		name = strings.TrimSuffix(name, "."+zone)
+	} else if strings.EqualFold(name, zone) || strings.EqualFold(name, zoneName) {
+		name = zoneName
+	}
+	if name == "" {
+		return zoneName
+	}
+	return name
 }
 
 func parseRecordForm(r *http.Request) (name, recordType, content string, ttl, priority int, disabled bool, err error) {

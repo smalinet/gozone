@@ -599,3 +599,29 @@ func TestPrepareMXSRVContent(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeRecordName(t *testing.T) {
+	zone := "example.com."
+	tests := []struct {
+		name, zoneName, want string
+	}{
+		{"www", zone, "www"},
+		{"@", zone, "example.com."},
+		{"", zone, "example.com."},
+		{"example.com.", zone, "example.com."},
+		{"example.com", zone, "example.com."},
+		{"EXAMPLE.COM.", zone, "example.com."},
+		{"www.example.com.", zone, "www"},
+		{"www.example.com", zone, "www"},
+		{"mail.example.com.", zone, "mail"},
+		{"other.com.", zone, "other.com."},
+		{"other.com", zone, "other.com"},
+	}
+
+	for _, tc := range tests {
+		result := normalizeRecordName(tc.name, tc.zoneName)
+		if result != tc.want {
+			t.Errorf("normalizeRecordName(%q, %q) = %q, want %q", tc.name, tc.zoneName, result, tc.want)
+		}
+	}
+}
