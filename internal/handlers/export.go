@@ -158,11 +158,17 @@ func (h *Handler) exportCSV(w http.ResponseWriter, zone *models.Zone, records []
 			if rr.Type == "MX" || rr.Type == "SRV" {
 				priority = rec.Priority
 			}
+			content := rec.Content
+			// PDNS stores TXT/SPF content with surrounding quotes; strip them
+			// so encoding/csv.Writer can apply proper CSV quoting itself.
+			if (rr.Type == "TXT" || rr.Type == "SPF") && strings.HasPrefix(content, `"`) && strings.HasSuffix(content, `"`) {
+				content = content[1 : len(content)-1]
+			}
 			// #nosec G104 — csv.Writer.Write errors in HTTP handler context; Flush reports cumulative errors
 			_ = writer.Write([]string{
 				rr.Name,
 				rr.Type,
-				rec.Content,
+				content,
 				fmt.Sprintf("%d", ttl),
 				fmt.Sprintf("%d", priority),
 				disabled,
