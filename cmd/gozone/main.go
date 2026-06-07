@@ -226,6 +226,19 @@ func main() {
 	}
 	fileServer(r, "/static", http.FS(staticFS))
 
+	// Favicon at root — browsers request /favicon.ico, not /static/favicon.ico
+	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		data, err := web.FS.ReadFile("static/favicon.ico")
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "image/x-icon")
+		// Cache aggressively — favicon changes rarely
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write(data) // #nosec G104
+	})
+
 	// API routes (API key auth, no CSRF)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.APIKeyAuth(db))
