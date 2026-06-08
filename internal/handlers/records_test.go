@@ -567,6 +567,17 @@ func TestUpdateRecord_PreservesSiblingRecords(t *testing.T) {
 
 func TestBatchCreateRecords_Success(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone:   models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{},
+			})
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 	defer pdnsSrv.Close()
@@ -602,6 +613,17 @@ func TestBatchCreateRecords_MX(t *testing.T) {
 	var body patchBody
 
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone:   models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{},
+			})
+			return
+		}
 		if r.Method == "PATCH" {
 			json.NewDecoder(r.Body).Decode(&body)
 		}
@@ -654,6 +676,17 @@ func TestBatchCreateRecords_SRV(t *testing.T) {
 	var body patchBody
 
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone:   models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{},
+			})
+			return
+		}
 		if r.Method == "PATCH" {
 			json.NewDecoder(r.Body).Decode(&body)
 		}
@@ -693,6 +726,166 @@ func TestBatchCreateRecords_SRV(t *testing.T) {
 	}
 	if rs.Records[0].Priority != 0 {
 		t.Errorf("expected priority 0 (omitted), got %d", rs.Records[0].Priority)
+	}
+}
+
+func TestCreateRecord_MergesWithExistingRRSet(t *testing.T) {
+	var patchedRRSet []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone: models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{
+					{
+						Name: "example.com.",
+						Type: "MX",
+						TTL:  300,
+						Records: []models.RecordInfo{
+							{Content: "10 smtp.example.com.", Priority: 0, Disabled: false},
+						},
+					},
+				},
+			})
+			return
+		}
+		if r.Method == http.MethodPatch {
+			body, _ := io.ReadAll(r.Body)
+			var payload struct {
+				RRSets []models.RRSet `json:"rrsets"`
+			}
+			json.Unmarshal(body, &payload)
+			patchedRRSet = payload.RRSets
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "name=example.com&type=MX&content=smtp.example.com.&ttl=300&priority=50"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/create", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.CreateRecord(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(patchedRRSet) != 1 {
+		t.Fatalf("expected 1 patched RRSet, got %d", len(patchedRRSet))
+	}
+
+	records := patchedRRSet[0].Records
+	if len(records) != 2 {
+		t.Fatalf("expected 2 records (original + new), got %d", len(records))
+	}
+
+	found10, found50 := false, false
+	for _, rec := range records {
+		if strings.Contains(rec.Content, "10 smtp.example.com") {
+			found10 = true
+		}
+		if strings.Contains(rec.Content, "50 smtp.example.com") {
+			found50 = true
+		}
+	}
+	if !found10 {
+		t.Error("original MX 10 record not preserved")
+	}
+	if !found50 {
+		t.Error("new MX 50 record not found in PATCH body")
+	}
+}
+
+func TestBatchCreateRecords_MergesWithExistingRRSet(t *testing.T) {
+	var patchedRRSet []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone: models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{
+					{
+						Name: "example.com.",
+						Type: "MX",
+						TTL:  300,
+						Records: []models.RecordInfo{
+							{Content: "10 smtp.example.com.", Priority: 0, Disabled: false},
+						},
+					},
+				},
+			})
+			return
+		}
+		if r.Method == http.MethodPatch {
+			body, _ := io.ReadAll(r.Body)
+			var payload struct {
+				RRSets []models.RRSet `json:"rrsets"`
+			}
+			json.Unmarshal(body, &payload)
+			patchedRRSet = payload.RRSets
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	body := "name=example.com&type=MX&content=smtp.example.com.&priority=50&ttl=300"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/batch-create", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.BatchCreateRecords(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if len(patchedRRSet) != 1 {
+		t.Fatalf("expected 1 patched RRSet, got %d", len(patchedRRSet))
+	}
+
+	records := patchedRRSet[0].Records
+	if len(records) != 2 {
+		t.Fatalf("expected 2 records (original + new), got %d", len(records))
+	}
+
+	found10, found50 := false, false
+	for _, rec := range records {
+		if strings.Contains(rec.Content, "10 smtp.example.com") {
+			found10 = true
+		}
+		if strings.Contains(rec.Content, "50 smtp.example.com") {
+			found50 = true
+		}
+	}
+	if !found10 {
+		t.Error("original MX 10 record not preserved")
+	}
+	if !found50 {
+		t.Error("new MX 50 record not found in PATCH body")
 	}
 }
 

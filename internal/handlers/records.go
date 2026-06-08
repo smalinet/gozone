@@ -35,6 +35,7 @@ func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 // CreateRecord creates a DNS record in a zone from form data (POST /zones/{zone_id}/records/create).
 //
 // Accepts name, type, content, ttl, and priority form values. Defaults TTL to 3600.
+// Merges into existing RRSet when name+type matches, preserving sibling records.
 func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUser(r)
 	zoneID := r.PathValue("zone_id")
@@ -73,22 +74,41 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
-
-	rrset := models.RRSet{
-		Name: name,
-		Type: recordType,
-		TTL:  ttl,
-		Records: []models.RecordInfo{
-			{
-				Content:  recordContent,
-				Priority: recordPriority,
-				Disabled: false,
-			},
-		},
+	allRecords, err := h.PDNS.ListRecords(r.Context(), zoneID)
+	if err != nil {
+		h.renderInternalError(w, r, "Failed to fetch existing records", err)
+		return
 	}
 
-	if err := h.PDNS.CreateRecord(r.Context(), zoneID, rrset); err != nil {
+	var existingRRSet *models.RRSet
+	for _, rr := range allRecords {
+		if rr.Name == name && rr.Type == recordType {
+			existingRRSet = &rr
+			break
+		}
+	}
+
+	var records []models.RecordInfo
+	newRecord := models.RecordInfo{Content: content, Priority: priority, Disabled: false}
+	if existingRRSet != nil {
+		records = mergeRecordIntoRRSet(existingRRSet.Records, "", 0, newRecord)
+	} else {
+		records = []models.RecordInfo{newRecord}
+	}
+
+	for i := range records {
+		records[i].Content, records[i].Priority =
+			prepareRecordContent(recordType, records[i].Content, records[i].Priority)
+	}
+
+	rrset := models.RRSet{
+		Name:    name,
+		Type:    recordType,
+		TTL:     ttl,
+		Records: records,
+	}
+
+	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
 		h.renderInternalError(w, r, "Failed to create record", err)
 		return
 	}
@@ -383,14 +403,12 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		recordContent, recordPriority := prepareRecordContent(recordType, content, priority)
-
 		rrsets = append(rrsets, models.RRSet{
 			Name: name,
 			Type: recordType,
 			TTL:  ttl,
 			Records: []models.RecordInfo{
-				{Content: recordContent, Priority: recordPriority, Disabled: false},
+				{Content: content, Priority: priority, Disabled: false},
 			},
 		})
 		logEntries = append(logEntries, logEntry{recordType, name, content})
@@ -401,7 +419,51 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.PDNS.CreateRecords(r.Context(), zoneID, rrsets); err != nil {
+	// Fetch existing RRSets to merge new records into
+	existing, err := h.PDNS.ListRecords(r.Context(), zoneID)
+	if err != nil {
+		h.renderInternalError(w, r, "Failed to fetch existing records", err)
+		return
+	}
+	existingMap := make(map[string]*models.RRSet)
+	for i := range existing {
+		existingMap[existing[i].Name+"|"+existing[i].Type] = &existing[i]
+	}
+
+	// Group new records by name+type, merging into existing RRSets
+	mergedMap := make(map[string]*models.RRSet)
+	for _, newRR := range rrsets {
+		key := newRR.Name + "|" + newRR.Type
+		if ex, ok := existingMap[key]; ok {
+			if m, seen := mergedMap[key]; seen {
+				m.Records = append(m.Records, newRR.Records...)
+			} else {
+				clone := *ex
+				for _, nr := range newRR.Records {
+					clone.Records = mergeRecordIntoRRSet(clone.Records, "", 0, nr)
+				}
+				clone.TTL = newRR.TTL
+				mergedMap[key] = &clone
+			}
+		} else {
+			if m, seen := mergedMap[key]; seen {
+				m.Records = append(m.Records, newRR.Records...)
+			} else {
+				mergedMap[key] = &newRR
+			}
+		}
+	}
+
+	var merged []models.RRSet
+	for _, rr := range mergedMap {
+		for i := range rr.Records {
+			rr.Records[i].Content, rr.Records[i].Priority =
+				prepareRecordContent(rr.Type, rr.Records[i].Content, rr.Records[i].Priority)
+		}
+		merged = append(merged, *rr)
+	}
+
+	if err := h.PDNS.CreateRecords(r.Context(), zoneID, merged); err != nil {
 		h.renderInternalError(w, r, "Failed to create records", err)
 		return
 	}
