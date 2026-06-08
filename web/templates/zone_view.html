@@ -6,7 +6,7 @@
         <div class="container">
 <div class="page-header">
     <div>
-        <a href="/zones" class="breadcrumb">Zones</a> / <h2>{{trimDot .Zone.Name}}</h2>
+        <a href="/zones" class="breadcrumb">Zones</a> / <h2>{{.Zone.Name}}</h2>
     </div>
     <div class="header-actions">
         <form method="GET" class="search-form" style="display:inline">
@@ -324,7 +324,7 @@
     </div>
     {{if .IsAdmin}}
     <hr style="margin:1rem 0">
-    <form method="POST" action="/zones/delete" onsubmit="return confirm('Delete zone {{trimDot .Zone.Name}}? This action cannot be undone.')">
+    <form method="POST" action="/zones/delete" onsubmit="return confirm('Delete zone {{.Zone.Name}}? This action cannot be undone.')">
         <input type="hidden" name="gorilla.csrf.Token" value="{{ .CSRFToken }}">
         <input type="hidden" name="zone_id" value="{{.Zone.ID}}">
         <button type="submit" class="btn btn-danger">Delete Zone</button>

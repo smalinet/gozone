@@ -24,7 +24,7 @@ func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":       "Add Record - " + strings.TrimSuffix(zone.Name, ".") + " - GoZone",
+		"Title":       "Add Record - " + zone.Name + " - GoZone",
 		"User":        user,
 		"Zone":        zone,
 		"RecordTypes": GetRecordTypes(),
@@ -161,7 +161,7 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":       "Edit Record - " + strings.TrimSuffix(zone.Name, ".") + " - GoZone",
+		"Title":       "Edit Record - " + zone.Name + " - GoZone",
 		"User":        user,
 		"Zone":        zone,
 		"Record":      targetRRSet,
