@@ -139,8 +139,8 @@ func TestCreateGroup_EmptyName(t *testing.T) {
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	h.CreateGroup(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Group name is required") {
 		t.Errorf("expected error message, got %s", w.Body.String())
@@ -159,8 +159,8 @@ func TestCreateGroup_DuplicateName(t *testing.T) {
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	h.CreateGroup(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "A group with that name already exists") {
 		t.Errorf("expected duplicate name error, got %s", w.Body.String())
@@ -199,8 +199,8 @@ func TestEditGroupPage_NotFound(t *testing.T) {
 	r = withUserContext(r, user)
 	h.EditGroupPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Group not found") {
 		t.Errorf("expected 'Group not found' error, got %s", w.Body.String())
@@ -218,8 +218,8 @@ func TestEditGroupPage_InvalidID(t *testing.T) {
 	r = withUserContext(r, user)
 	h.EditGroupPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Invalid group ID") {
 		t.Errorf("expected 'Invalid group ID' error, got %s", w.Body.String())
@@ -266,8 +266,8 @@ func TestUpdateGroup_EmptyName(t *testing.T) {
 	r = withUserContext(r, user)
 	h.UpdateGroup(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Group name is required") {
 		t.Errorf("expected error message, got %s", w.Body.String())
@@ -289,8 +289,8 @@ func TestUpdateGroup_DuplicateName(t *testing.T) {
 	r = withUserContext(r, user)
 	h.UpdateGroup(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "already exists") {
 		t.Errorf("expected duplicate name error, got %s", w.Body.String())

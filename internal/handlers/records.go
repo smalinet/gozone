@@ -19,7 +19,7 @@ func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 
 	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
-		h.renderError(w, r, "Zone not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Zone not found")
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 
 	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
-		h.renderError(w, r, "Zone not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Zone not found")
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if targetRRSet == nil {
-		h.renderError(w, r, "Record not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Record not found")
 		return
 	}
 

@@ -175,8 +175,8 @@ func TestEditUserPage_NotFound(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.EditUserPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 }
 

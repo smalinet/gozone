@@ -115,7 +115,7 @@ func (h *Handler) EditGroupPage(w http.ResponseWriter, r *http.Request) {
 		"SELECT id, name, description, created_at FROM zone_groups WHERE id = ?", groupID,
 	).Scan(&g.ID, &g.Name, &g.Description, &g.CreatedAt)
 	if err == sql.ErrNoRows {
-		h.renderError(w, r, "Group not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Group not found")
 		return
 	}
 	if err != nil {

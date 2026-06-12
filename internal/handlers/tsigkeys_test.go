@@ -121,8 +121,8 @@ func TestCreateTSIGKey_EmptyName(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.CreateTSIGKey(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Key name is required") {
 		t.Error("expected 'Key name is required' in error page")

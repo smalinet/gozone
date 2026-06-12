@@ -52,8 +52,8 @@ func TestCreateRecordPage_ZoneNotFound(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.CreateRecordPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 }
 
@@ -250,8 +250,8 @@ func TestEditRecordPage_ZoneNotFound(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.EditRecordPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Zone not found") {
 		t.Error("expected 'Zone not found' error message")
@@ -280,8 +280,8 @@ func TestEditRecordPage_RecordNotFound(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.EditRecordPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Record not found") {
 		t.Error("expected 'Record not found' error message")
@@ -312,8 +312,8 @@ func TestEditRecordPage_RecordRetrievalError(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.EditRecordPage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Failed to fetch records") {
 		t.Errorf("expected 'Failed to fetch records' error message, got: %s", w.Body.String())
@@ -908,8 +908,8 @@ func TestBatchCreateRecords_PDNSError_NoLogs(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.BatchCreateRecords(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
 	}
 
 	var count int
@@ -932,8 +932,8 @@ func TestBatchCreateRecords_EmptyRecords(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.BatchCreateRecords(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "At least one record is required") {
 		t.Error("expected error message")
