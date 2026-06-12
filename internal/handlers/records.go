@@ -481,37 +481,20 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/zones/"+zoneID, http.StatusSeeOther)
 }
 
-// prepareRecordContent normalises record content for the PDNS PATCH API.
-// For MX/SRV: embeds priority in content, stripping any existing priority prefix
-// from PDNS read-path data first. Returns 0 for RecordInfo.Priority because
-// PDNS rejects the "priority" element in the PATCH body.
-// For TXT/SPF: PDNS stores content with surrounding double quotes; adds them
-// if the content is not already quoted.
+// prepareRecordContent normalises record content for the PDNS PATCH API,
+// returning the wire content and the value to store in RecordInfo.Priority.
+// MX/SRV priority is embedded in the content (and the separate Priority element
+// cleared, since PDNS rejects it); TXT/SPF content is quoted. See the codec in
+// internal/models for the per-type rules.
 func prepareRecordContent(recordType, content string, priority int) (string, int) {
-	if recordType == "TXT" || recordType == "SPF" {
-		if content != "" && !strings.HasPrefix(content, `"`) && !strings.HasPrefix(content, `'`) {
-			content = `"` + content + `"`
-		}
+	switch {
+	case models.TypeHasPriority(recordType):
+		return models.JoinPriority(recordType, priority, content), 0
+	case models.TypeIsQuoted(recordType):
+		return models.QuoteContent(recordType, content), priority
+	default:
 		return content, priority
 	}
-	if recordType != "MX" && recordType != "SRV" {
-		return content, priority
-	}
-	tokens := strings.Fields(content)
-	if len(tokens) > 0 {
-		if _, err := strconv.Atoi(tokens[0]); err == nil {
-			// Only strip when token count indicates PDNS read-path content:
-			// MX from PDNS: "10 mail.example.com." (2+ tokens)
-			// SRV from PDNS: "10 5 5060 target." (4 tokens: priority weight port target)
-			// SRV from form:  "5 5060 target."    (3 tokens: weight port target)
-			isPDNSFormat := (recordType == "MX" && len(tokens) >= 2) ||
-				(recordType == "SRV" && len(tokens) >= 4)
-			if isPDNSFormat {
-				content = strings.Join(tokens[1:], " ")
-			}
-		}
-	}
-	return fmt.Sprintf("%d %s", priority, content), 0
 }
 
 // mergeRecordIntoRRSet replaces the record matching originalContent+originalPriority

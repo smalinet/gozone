@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -254,33 +253,13 @@ func (c *Client) ListRecords(ctx context.Context, zoneID string) ([]models.RRSet
 	}
 	for i := range full.RRSets {
 		for j := range full.RRSets[i].Records {
-			p, c, ok := extractPriorityFromContent(full.RRSets[i].Type, full.RRSets[i].Records[j].Content)
-			if ok {
+			if p, c, ok := models.SplitPriority(full.RRSets[i].Type, full.RRSets[i].Records[j].Content); ok {
 				full.RRSets[i].Records[j].Priority = p
 				full.RRSets[i].Records[j].Content = c
 			}
 		}
 	}
 	return full.RRSets, nil
-}
-
-// extractPriorityFromContent splits the leading priority off an MX/SRV record's
-// content. The boolean reports whether a priority was successfully extracted;
-// callers must rely on it rather than on a non-zero priority, since 0 is a valid
-// MX/SRV priority and must still be stripped from the content.
-func extractPriorityFromContent(recordType, content string) (int, string, bool) {
-	if recordType != "MX" && recordType != "SRV" {
-		return 0, content, false
-	}
-	parts := strings.SplitN(content, " ", 2)
-	if len(parts) != 2 {
-		return 0, content, false
-	}
-	prio, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0, content, false
-	}
-	return prio, parts[1], true
 }
 
 // CreateRecord creates a new RRSet in a zone.
