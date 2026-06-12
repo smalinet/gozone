@@ -213,6 +213,106 @@ func TestAPIUpdateRecord(t *testing.T) {
 	}
 }
 
+// captureRRSets decodes the rrsets PowerDNS receives in a PATCH body.
+func captureRRSets(t *testing.T, got *[]models.RRSet) func(http.ResponseWriter, *http.Request) {
+	t.Helper()
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch {
+			var payload struct {
+				RRSets []models.RRSet `json:"rrsets"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Errorf("decode PATCH body: %v", err)
+			}
+			*got = payload.RRSets
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func TestAPICreateRecord_MXEmbedsPriority(t *testing.T) {
+	var sent []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, captureRRSets(t, &sent))
+	defer pdnsSrv.Close()
+
+	// Client sends the bare target plus a separate priority field — the same
+	// shape APIListRecords returns.
+	body := `{"name":"example.com.","type":"MX","ttl":3600,"records":[{"content":"mail.example.com.","priority":10}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/zones/example.com./records", jsonBody(body))
+	r.SetPathValue("zone_id", "example.com.")
+	h.APICreateRecord(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d (%s)", w.Code, w.Body.String())
+	}
+	if len(sent) != 1 || len(sent[0].Records) != 1 {
+		t.Fatalf("expected 1 rrset with 1 record sent to PDNS, got %+v", sent)
+	}
+	// Priority must be embedded in the content and the separate element cleared.
+	if got := sent[0].Records[0]; got.Content != "10 mail.example.com." || got.Priority != 0 {
+		t.Errorf("PDNS received content=%q priority=%d, want %q and 0", got.Content, got.Priority, "10 mail.example.com.")
+	}
+}
+
+func TestAPICreateRecord_PriorityZero(t *testing.T) {
+	var sent []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, captureRRSets(t, &sent))
+	defer pdnsSrv.Close()
+
+	body := `{"name":"example.com.","type":"MX","ttl":3600,"records":[{"content":"mail.example.com.","priority":0}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/zones/example.com./records", jsonBody(body))
+	r.SetPathValue("zone_id", "example.com.")
+	h.APICreateRecord(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d (%s)", w.Code, w.Body.String())
+	}
+	if got := sent[0].Records[0].Content; got != "0 mail.example.com." {
+		t.Errorf("PDNS received content=%q, want %q", got, "0 mail.example.com.")
+	}
+}
+
+func TestAPICreateRecord_NormalizesName(t *testing.T) {
+	var sent []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, captureRRSets(t, &sent))
+	defer pdnsSrv.Close()
+
+	// Relative name must be canonicalised against the zone with a trailing dot.
+	body := `{"name":"www","type":"A","ttl":300,"records":[{"content":"1.2.3.4"}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/zones/example.com./records", jsonBody(body))
+	r.SetPathValue("zone_id", "example.com.")
+	h.APICreateRecord(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d (%s)", w.Code, w.Body.String())
+	}
+	if sent[0].Name != "www.example.com." {
+		t.Errorf("PDNS received name=%q, want %q", sent[0].Name, "www.example.com.")
+	}
+}
+
+func TestAPIUpdateRecord_SRVEmbedsPriority(t *testing.T) {
+	var sent []models.RRSet
+	h, pdnsSrv := newTestHandlerWithPDNS(t, captureRRSets(t, &sent))
+	defer pdnsSrv.Close()
+
+	body := `{"name":"_sip._tcp.example.com.","type":"SRV","ttl":3600,"records":[{"content":"5 5060 sip.example.com.","priority":10}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPut, "/api/v1/zones/example.com./records", jsonBody(body))
+	r.SetPathValue("zone_id", "example.com.")
+	h.APIUpdateRecord(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (%s)", w.Code, w.Body.String())
+	}
+	if got := sent[0].Records[0]; got.Content != "10 5 5060 sip.example.com." || got.Priority != 0 {
+		t.Errorf("PDNS received content=%q priority=%d, want %q and 0", got.Content, got.Priority, "10 5 5060 sip.example.com.")
+	}
+}
+
 func TestAPIDeleteRecord(t *testing.T) {
 	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPatch {

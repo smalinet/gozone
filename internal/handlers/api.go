@@ -135,9 +135,36 @@ func (h *Handler) APIListRecords(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, records)
 }
 
+// prepareAPIRecordSet validates and normalises an RRSet from an API request for
+// the PDNS PATCH API, mirroring the web write path: it canonicalises the name
+// (trailing dot, relative-to-zone), then embeds the MX/SRV priority into each
+// record's content and quotes TXT/SPF. Content is validated in its bare form
+// (priority carried in RecordInfo.Priority), which matches what APIListRecords
+// returns, so a read-modify-write round trip works. Returns a validation error
+// for a 400, or nil when the RRSet is valid.
+func prepareAPIRecordSet(rrset *models.RRSet, zoneID string) error {
+	if err := validators.ValidateRecordType(rrset.Type); err != nil {
+		return err
+	}
+	for i := range rrset.Records {
+		if err := validators.ValidateRecordContent(rrset.Type, rrset.Records[i].Content); err != nil {
+			return err
+		}
+	}
+
+	rrset.Name = normalizeRecordName(rrset.Name, zoneID)
+	for i := range rrset.Records {
+		rrset.Records[i].Content, rrset.Records[i].Priority =
+			prepareRecordContent(rrset.Type, rrset.Records[i].Content, rrset.Records[i].Priority)
+	}
+	return nil
+}
+
 // APICreateRecord creates a record (RRSet) in a zone from a JSON body (POST /api/v1/zones/{zone_id}/records).
 //
-// Expects a models.RRSet payload. Returns HTTP 201 on success.
+// Expects a models.RRSet payload. For MX/SRV, the priority is taken from each
+// record's "priority" field and embedded into the content for PowerDNS. Returns
+// HTTP 201 on success.
 func (h *Handler) APICreateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	var rrset models.RRSet
@@ -146,16 +173,9 @@ func (h *Handler) APICreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validators.ValidateRecordType(rrset.Type); err != nil {
+	if err := prepareAPIRecordSet(&rrset, zoneID); err != nil {
 		writeAPIError(w, http.StatusBadRequest, ErrCodeValidationError, err.Error())
 		return
-	}
-
-	for _, r := range rrset.Records {
-		if err := validators.ValidateRecordContent(rrset.Type, r.Content); err != nil {
-			writeAPIError(w, http.StatusBadRequest, ErrCodeValidationError, err.Error())
-			return
-		}
 	}
 
 	if err := h.PDNS.CreateRecord(r.Context(), zoneID, rrset); err != nil {
@@ -167,7 +187,8 @@ func (h *Handler) APICreateRecord(w http.ResponseWriter, r *http.Request) {
 
 // APIUpdateRecord replaces a record (RRSet) in a zone from a JSON body (PUT /api/v1/zones/{zone_id}/records).
 //
-// Uses the REPLACE changetype to ensure idempotent updates.
+// Uses the REPLACE changetype to ensure idempotent updates. As with creation,
+// MX/SRV priority is taken from the "priority" field and embedded into content.
 func (h *Handler) APIUpdateRecord(w http.ResponseWriter, r *http.Request) {
 	zoneID := r.PathValue("zone_id")
 	var rrset models.RRSet
@@ -176,16 +197,9 @@ func (h *Handler) APIUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validators.ValidateRecordType(rrset.Type); err != nil {
+	if err := prepareAPIRecordSet(&rrset, zoneID); err != nil {
 		writeAPIError(w, http.StatusBadRequest, ErrCodeValidationError, err.Error())
 		return
-	}
-
-	for _, r := range rrset.Records {
-		if err := validators.ValidateRecordContent(rrset.Type, r.Content); err != nil {
-			writeAPIError(w, http.StatusBadRequest, ErrCodeValidationError, err.Error())
-			return
-		}
 	}
 
 	if err := h.PDNS.UpdateRecord(r.Context(), zoneID, rrset); err != nil {
