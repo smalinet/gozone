@@ -319,6 +319,39 @@ func TestListRecords(t *testing.T) {
 	}
 }
 
+func TestListRecordsExtractsPriority(t *testing.T) {
+	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(struct {
+			RRSets []models.RRSet `json:"rrsets"`
+		}{
+			RRSets: []models.RRSet{
+				{Name: "example.com", Type: "MX", TTL: 3600, Records: []models.RecordInfo{
+					{Content: "10 mail.example.com."},
+					{Content: "0 backup.example.com."},
+				}},
+			},
+		})
+	})
+
+	records, err := client.ListRecords(context.Background(), "example.com")
+	if err != nil {
+		t.Fatalf("ListRecords failed: %v", err)
+	}
+	if len(records) != 1 || len(records[0].Records) != 2 {
+		t.Fatalf("expected 1 rrset with 2 records, got %+v", records)
+	}
+
+	// Priority 10 is split off into the Priority field, content keeps the host.
+	if got := records[0].Records[0]; got.Priority != 10 || got.Content != "mail.example.com." {
+		t.Errorf("record[0] = {prio %d, %q}, want {10, %q}", got.Priority, got.Content, "mail.example.com.")
+	}
+	// Priority 0 is valid and must also be stripped from the content.
+	if got := records[0].Records[1]; got.Priority != 0 || got.Content != "backup.example.com." {
+		t.Errorf("record[1] = {prio %d, %q}, want {0, %q}", got.Priority, got.Content, "backup.example.com.")
+	}
+}
+
 func TestCreateRecord(t *testing.T) {
 	client, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPatch {
@@ -758,6 +791,7 @@ func TestExtractPriorityFromContent(t *testing.T) {
 		content     string
 		wantPrio    int
 		wantContent string
+		wantOK      bool
 	}{
 		{
 			name:        "MX with priority in content",
@@ -765,6 +799,15 @@ func TestExtractPriorityFromContent(t *testing.T) {
 			content:     "10 mail.example.com.",
 			wantPrio:    10,
 			wantContent: "mail.example.com.",
+			wantOK:      true,
+		},
+		{
+			name:        "MX with priority zero",
+			recordType:  "MX",
+			content:     "0 mail.example.com.",
+			wantPrio:    0,
+			wantContent: "mail.example.com.",
+			wantOK:      true,
 		},
 		{
 			name:        "MX without priority",
@@ -772,6 +815,7 @@ func TestExtractPriorityFromContent(t *testing.T) {
 			content:     "mail.example.com.",
 			wantPrio:    0,
 			wantContent: "mail.example.com.",
+			wantOK:      false,
 		},
 		{
 			name:        "A record (not MX/SRV)",
@@ -779,6 +823,7 @@ func TestExtractPriorityFromContent(t *testing.T) {
 			content:     "192.0.2.1",
 			wantPrio:    0,
 			wantContent: "192.0.2.1",
+			wantOK:      false,
 		},
 		{
 			name:        "SRV with priority",
@@ -786,6 +831,15 @@ func TestExtractPriorityFromContent(t *testing.T) {
 			content:     "5 5060 srv.example.com.",
 			wantPrio:    5,
 			wantContent: "5060 srv.example.com.",
+			wantOK:      true,
+		},
+		{
+			name:        "SRV with priority zero",
+			recordType:  "SRV",
+			content:     "0 5 5060 srv.example.com.",
+			wantPrio:    0,
+			wantContent: "5 5060 srv.example.com.",
+			wantOK:      true,
 		},
 		{
 			name:        "SRV with all parts in content",
@@ -793,6 +847,7 @@ func TestExtractPriorityFromContent(t *testing.T) {
 			content:     "10 60 5060 big.example.com.",
 			wantPrio:    10,
 			wantContent: "60 5060 big.example.com.",
+			wantOK:      true,
 		},
 		{
 			name:        "Empty content",
@@ -800,12 +855,16 @@ func TestExtractPriorityFromContent(t *testing.T) {
 			content:     "",
 			wantPrio:    0,
 			wantContent: "",
+			wantOK:      false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPrio, gotContent := extractPriorityFromContent(tt.recordType, tt.content)
+			gotPrio, gotContent, gotOK := extractPriorityFromContent(tt.recordType, tt.content)
+			if gotOK != tt.wantOK {
+				t.Errorf("ok = %t, want %t", gotOK, tt.wantOK)
+			}
 			if gotPrio != tt.wantPrio {
 				t.Errorf("priority = %d, want %d", gotPrio, tt.wantPrio)
 			}
