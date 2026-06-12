@@ -940,6 +940,48 @@ func TestBatchCreateRecords_EmptyRecords(t *testing.T) {
 	}
 }
 
+func TestBatchCreateRecords_MismatchedArrays(t *testing.T) {
+	h, pdnsSrv := newTestHandlerWithPDNS(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/zones/") {
+			json.NewEncoder(w).Encode(struct {
+				models.Zone
+				RRSets []models.RRSet `json:"rrsets"`
+			}{
+				Zone:   models.Zone{ID: "example.com", Name: "example.com", Kind: "Native"},
+				RRSets: []models.RRSet{},
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	defer pdnsSrv.Close()
+
+	testutil.SeedTestUser(t, h.DB, "admin", "admin", "admin", true)
+	user := &models.User{ID: 1, Username: "admin", Role: "admin"}
+	ctx := context.WithValue(context.Background(), middleware.UserContextKey, user)
+
+	// Two "name" values but a single "type"/"content": the parallel arrays are
+	// unbalanced. This used to index types[1]/contents[1] out of range and panic.
+	body := "name=www&name=mail&type=A&content=10.0.0.1"
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/zones/example.com/records/batch-create", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.SetPathValue("zone_id", "example.com")
+	r = r.WithContext(ctx)
+	h.BatchCreateRecords(w, r)
+
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect, got %d (%s)", w.Code, w.Body.String())
+	}
+	// Only the first index is complete, so exactly one record is created.
+	var count int
+	h.DB.QueryRow("SELECT COUNT(*) FROM activity_logs WHERE action='create_record'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 activity log, got %d", count)
+	}
+}
+
 func TestPrepareRecordContent(t *testing.T) {
 	tests := []struct {
 		name          string

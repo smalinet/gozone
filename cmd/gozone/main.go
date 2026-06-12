@@ -285,6 +285,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	shutdownDone := make(chan struct{})
 	go func() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -295,12 +296,17 @@ func main() {
 		if err := srv.Shutdown(ctx); err != nil {
 			logger.Error("shutdown error", "error", err)
 		}
+		close(shutdownDone)
 	}()
 
 	logger.Info("server starting", "addr", addr)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Fatal("server failed", "error", err)
 	}
+	// ListenAndServe returns ErrServerClosed as soon as Shutdown begins; wait
+	// for the drain to finish before returning so deferred cleanup (db.Close,
+	// etc.) does not run while in-flight requests are still being served.
+	<-shutdownDone
 	logger.Info("server stopped")
 }
 
