@@ -123,17 +123,10 @@ func (h *Handler) exportBind(w http.ResponseWriter, zone *models.Zone, records [
 }
 
 func formatRecordContent(rtype, content string, priority int) string {
-	switch rtype {
-	case "MX", "SRV":
-		return fmt.Sprintf("%d %s", priority, content)
-	case "TXT":
-		if !strings.HasPrefix(content, `"`) && !strings.HasPrefix(content, `'`) {
-			return `"` + content + `"`
-		}
-		return content
-	default:
-		return content
+	if models.TypeHasPriority(rtype) {
+		return models.JoinPriority(rtype, priority, content)
 	}
+	return models.QuoteContent(rtype, content)
 }
 
 // exportCSV writes records in CSV format.
@@ -155,15 +148,12 @@ func (h *Handler) exportCSV(w http.ResponseWriter, zone *models.Zone, records []
 				disabled = "true"
 			}
 			priority := 0
-			if rr.Type == "MX" || rr.Type == "SRV" {
+			if models.TypeHasPriority(rr.Type) {
 				priority = rec.Priority
 			}
-			content := rec.Content
-			// PDNS stores TXT/SPF content with surrounding quotes; strip them
-			// so encoding/csv.Writer can apply proper CSV quoting itself.
-			if (rr.Type == "TXT" || rr.Type == "SPF") && strings.HasPrefix(content, `"`) && strings.HasSuffix(content, `"`) {
-				content = content[1 : len(content)-1]
-			}
+			// Strip the PDNS TXT/SPF quotes so encoding/csv.Writer can apply
+			// proper CSV quoting itself.
+			content := models.UnquoteContent(rr.Type, rec.Content)
 			// #nosec G104 — csv.Writer.Write errors in HTTP handler context; Flush reports cumulative errors
 			_ = writer.Write([]string{
 				rr.Name,

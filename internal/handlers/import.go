@@ -377,19 +377,6 @@ func groupBindRecords(raw []bindRecord) []models.RRSet {
 	return rrsets
 }
 
-func extractPriority(rtype, data string) int {
-	if rtype != "MX" && rtype != "SRV" {
-		return 0
-	}
-	tokens := strings.Fields(data)
-	if len(tokens) > 0 {
-		if p, err := strconv.Atoi(tokens[0]); err == nil {
-			return p
-		}
-	}
-	return 0
-}
-
 // parseCSVZone parses CSV zone data and returns RRSets.
 func parseCSVZone(reader *csv.Reader) ([]models.RRSet, error) {
 	rows, err := reader.ReadAll()
@@ -438,12 +425,11 @@ func parseCSVZone(reader *csv.Reader) ([]models.RRSet, error) {
 
 		csvContent := content
 		csvPriority := 0
-		if rtype == "MX" || rtype == "SRV" {
-			csvContent = fmt.Sprintf("%d %s", priority, content)
-		} else if (rtype == "TXT" || rtype == "SPF") && content != "" {
-			if !strings.HasPrefix(content, `"`) && !strings.HasPrefix(content, `'`) {
-				csvContent = `"` + content + `"`
-			}
+		switch {
+		case models.TypeHasPriority(rtype):
+			csvContent = models.JoinPriority(rtype, priority, content)
+		case models.TypeIsQuoted(rtype):
+			csvContent = models.QuoteContent(rtype, content)
 		}
 
 		k := key{name, rtype}

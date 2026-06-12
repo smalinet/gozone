@@ -289,18 +289,6 @@ func TestResolveBindName(t *testing.T) {
 	}
 }
 
-func TestExtractPriority(t *testing.T) {
-	if p := extractPriority("MX", "10 mail.example.com."); p != 10 {
-		t.Errorf("expected 10, got %d", p)
-	}
-	if p := extractPriority("SRV", "10 5 5060 sip.example.com."); p != 10 {
-		t.Errorf("expected 10, got %d", p)
-	}
-	if p := extractPriority("A", "192.0.2.1"); p != 0 {
-		t.Errorf("expected 0 for A, got %d", p)
-	}
-}
-
 func TestGetCSVField(t *testing.T) {
 	headers := map[string]int{"name": 0, "type": 1, "content": 2}
 	row := []string{"example.com.", "A", "192.0.2.1"}
