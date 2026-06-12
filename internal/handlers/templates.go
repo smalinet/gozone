@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,6 +16,21 @@ import (
 
 // TemplateVariables are the substitution variables available in template records.
 var TemplateVariables = []string{"ZONE", "IP", "IP6", "MX_HOST", "TTL", "REFRESH", "RETRY", "EXPIRE", "MINIMUM"}
+
+// templateVarDefaults provides fallback values for SOA timer variables so the
+// built-in "standard" template yields a valid SOA even when the operator leaves
+// these fields blank. Variables without a default (ZONE, IP, MX_HOST, ...) stay
+// required and are reported by substituteTemplateRecords if left unsubstituted.
+var templateVarDefaults = map[string]string{
+	"REFRESH": "10800",
+	"RETRY":   "3600",
+	"EXPIRE":  "604800",
+	"MINIMUM": "3600",
+}
+
+// unsubstitutedVar matches any template placeholder left after substitution
+// (variable names are upper-case alphanumeric with underscores, e.g. IP6).
+var unsubstitutedVar = regexp.MustCompile(`\{\{[A-Z0-9_]+\}\}`)
 
 // ListTemplates renders the template management page.
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
@@ -250,7 +267,14 @@ func (h *Handler) ApplyTemplateToZone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := h.collectTemplateVars(r)
-	rrsets := h.substituteTemplateRecords(zoneID, records, vars)
+	if vars["ZONE"] == "" {
+		vars["ZONE"] = zoneID
+	}
+	rrsets, err := h.substituteTemplateRecords(zoneID, records, vars)
+	if err != nil {
+		h.renderError(w, r, err.Error())
+		return
+	}
 
 	if err := h.PDNS.CreateRecords(r.Context(), zoneID, rrsets); err != nil {
 		h.renderInternalError(w, r, "Failed to create records from template", err)
@@ -313,18 +337,36 @@ func (h *Handler) getAllTemplates() ([]models.ZoneTemplate, error) {
 	return templates, nil
 }
 
-// substituteTemplateRecords replaces template variables in record names and contents
-// and converts template records to PowerDNS RRSets.
-func (h *Handler) substituteTemplateRecords(zoneID string, records []models.ZoneTemplateRecord, vars map[string]string) []models.RRSet {
+// substituteTemplateRecords replaces template variables in record names and
+// contents and converts template records to PowerDNS RRSets. Missing SOA timer
+// variables fall back to templateVarDefaults. It returns an error if any
+// placeholder is left unsubstituted (a required variable was not provided).
+func (h *Handler) substituteTemplateRecords(zoneID string, records []models.ZoneTemplateRecord, vars map[string]string) ([]models.RRSet, error) {
+	// Merge defaults under the caller-provided values without mutating vars.
+	merged := make(map[string]string, len(vars)+len(templateVarDefaults))
+	for k, v := range templateVarDefaults {
+		merged[k] = v
+	}
+	for k, v := range vars {
+		if v != "" {
+			merged[k] = v
+		}
+	}
+
 	rrsets := make([]models.RRSet, 0, len(records))
+	missing := make(map[string]struct{})
 
 	for _, r := range records {
 		name := r.Name
 		content := r.Content
 
-		for v, val := range vars {
+		for v, val := range merged {
 			name = strings.ReplaceAll(name, "{{"+v+"}}", val)
 			content = strings.ReplaceAll(content, "{{"+v+"}}", val)
+		}
+
+		for _, leftover := range unsubstitutedVar.FindAllString(name+" "+content, -1) {
+			missing[strings.Trim(leftover, "{}")] = struct{}{}
 		}
 
 		if name == "@" {
@@ -333,18 +375,28 @@ func (h *Handler) substituteTemplateRecords(zoneID string, records []models.Zone
 			name = name + "." + zoneID
 		}
 
-		rrset := models.RRSet{
+		// Embed MX/SRV priority into the content; PDNS rejects a separate
+		// "priority" element in the PATCH body.
+		content, priority := prepareRecordContent(r.Type, content, r.Priority)
+
+		rrsets = append(rrsets, models.RRSet{
 			Name:    name,
 			Type:    r.Type,
 			TTL:     r.TTL,
-			Records: []models.RecordInfo{{Content: content, Disabled: r.Disabled}},
-		}
-		if r.Type == "MX" || r.Type == "SRV" {
-			rrset.Records[0].Priority = r.Priority
-		}
-		rrsets = append(rrsets, rrset)
+			Records: []models.RecordInfo{{Content: content, Priority: priority, Disabled: r.Disabled}},
+		})
 	}
-	return rrsets
+
+	if len(missing) > 0 {
+		names := make([]string, 0, len(missing))
+		for v := range missing {
+			names = append(names, v)
+		}
+		sort.Strings(names)
+		return nil, fmt.Errorf("missing template variable(s): %s", strings.Join(names, ", "))
+	}
+
+	return rrsets, nil
 }
 
 // collectTemplateVars extracts template variable values from a form.
@@ -390,7 +442,7 @@ func (h *Handler) SeedBuiltinTemplates() error {
 			name: "standard",
 			desc: "SOA + NS records only",
 			records: []models.ZoneTemplateRecord{
-				{Name: "@", Type: "SOA", Content: "ns1.{{ZONE}} hostmaster.{{ZONE}} {{REFRESH}} {{RETRY}} {{EXPIRE}} {{MINIMUM}}", TTL: 3600},
+				{Name: "@", Type: "SOA", Content: "ns1.{{ZONE}} hostmaster.{{ZONE}} 1 {{REFRESH}} {{RETRY}} {{EXPIRE}} {{MINIMUM}}", TTL: 3600},
 				{Name: "@", Type: "NS", Content: "ns1.{{ZONE}}", TTL: 86400},
 				{Name: "@", Type: "NS", Content: "ns2.{{ZONE}}", TTL: 86400},
 			},

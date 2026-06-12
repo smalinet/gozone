@@ -429,7 +429,10 @@ func TestSubstituteTemplateRecords(t *testing.T) {
 		"POLICY":  "none",
 	}
 
-	rrsets := h.substituteTemplateRecords("example.com.", records, vars)
+	rrsets, err := h.substituteTemplateRecords("example.com.", records, vars)
+	if err != nil {
+		t.Fatalf("substituteTemplateRecords: %v", err)
+	}
 
 	if len(rrsets) != 4 {
 		t.Fatalf("expected 4 rrsets, got %d", len(rrsets))
@@ -445,13 +448,15 @@ func TestSubstituteTemplateRecords(t *testing.T) {
 		t.Errorf("CNAME record: got name=%q content=%q", rrsets[1].Name, rrsets[1].Records[0].Content)
 	}
 
-	// MX record - priority preserved
-	if rrsets[2].Type != "MX" || rrsets[2].Records[0].Priority != 10 {
-		t.Errorf("MX priority: got %d, want 10", rrsets[2].Records[0].Priority)
+	// MX record - priority embedded in content for the PDNS PATCH API, with the
+	// separate Priority element cleared (PDNS rejects it).
+	if rrsets[2].Type != "MX" || rrsets[2].Records[0].Content != "10 mail.example.com." || rrsets[2].Records[0].Priority != 0 {
+		t.Errorf("MX record: got content=%q priority=%d, want %q and 0",
+			rrsets[2].Records[0].Content, rrsets[2].Records[0].Priority, "10 mail.example.com.")
 	}
 
-	// DMARC
-	if rrsets[3].Name != "_dmarc.example.com." || rrsets[3].Records[0].Content != "v=DMARC1; p=none" {
+	// DMARC (TXT) - content is quoted for the PDNS API, like the UI write path.
+	if rrsets[3].Name != "_dmarc.example.com." || rrsets[3].Records[0].Content != `"v=DMARC1; p=none"` {
 		t.Errorf("DMARC record: got name=%q content=%q", rrsets[3].Name, rrsets[3].Records[0].Content)
 	}
 }
@@ -464,10 +469,55 @@ func TestSubstituteTemplateRecords_AbsoluteName(t *testing.T) {
 	}
 
 	vars := map[string]string{"IP": "10.0.0.1"}
-	rrsets := h.substituteTemplateRecords("example.com.", records, vars)
+	rrsets, err := h.substituteTemplateRecords("example.com.", records, vars)
+	if err != nil {
+		t.Fatalf("substituteTemplateRecords: %v", err)
+	}
 
 	if rrsets[0].Name != "sub.other.com." {
 		t.Errorf("absolute name should be preserved: got %q", rrsets[0].Name)
+	}
+}
+
+func TestSubstituteTemplateRecords_MissingVariable(t *testing.T) {
+	h, _ := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
+
+	records := []models.ZoneTemplateRecord{
+		{Name: "@", Type: "MX", Content: "{{MX_HOST}}", TTL: 3600, Priority: 10},
+		{Name: "@", Type: "AAAA", Content: "{{IP6}}", TTL: 3600},
+	}
+
+	// Neither MX_HOST nor IP6 has a default; both must be reported (IP6 also
+	// guards the digit in the placeholder regex) instead of being emitted as
+	// literals that PDNS would reject.
+	_, err := h.substituteTemplateRecords("example.com.", records, map[string]string{"ZONE": "example.com."})
+	if err == nil {
+		t.Fatal("expected error for missing variables, got nil")
+	}
+	if !strings.Contains(err.Error(), "MX_HOST") || !strings.Contains(err.Error(), "IP6") {
+		t.Errorf("error should name the missing variables, got %q", err.Error())
+	}
+}
+
+func TestSubstituteTemplateRecords_SOATimerDefaults(t *testing.T) {
+	h, _ := newTestHandlerWithPDNS(t, pdnsEmptyHandler())
+
+	// The built-in "standard" SOA relies on timer defaults; with only ZONE
+	// provided it must still produce a complete 7-field SOA and no error.
+	records := []models.ZoneTemplateRecord{
+		{Name: "@", Type: "SOA", Content: "ns1.{{ZONE}} hostmaster.{{ZONE}} 1 {{REFRESH}} {{RETRY}} {{EXPIRE}} {{MINIMUM}}", TTL: 3600},
+	}
+
+	rrsets, err := h.substituteTemplateRecords("example.com.", records, map[string]string{"ZONE": "example.com."})
+	if err != nil {
+		t.Fatalf("substituteTemplateRecords: %v", err)
+	}
+	want := "ns1.example.com. hostmaster.example.com. 1 10800 3600 604800 3600"
+	if got := rrsets[0].Records[0].Content; got != want {
+		t.Errorf("SOA content = %q, want %q", got, want)
+	}
+	if fields := strings.Fields(rrsets[0].Records[0].Content); len(fields) != 7 {
+		t.Errorf("SOA must have 7 fields, got %d: %q", len(fields), rrsets[0].Records[0].Content)
 	}
 }
 

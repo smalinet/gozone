@@ -197,6 +197,9 @@ func TestFormatRecordContent(t *testing.T) {
 		expected       string
 	}{
 		{"MX", "mail.example.com.", 10, "10 mail.example.com."},
+		{"MX", "mail.example.com.", 0, "0 mail.example.com."},
+		{"SRV", "5 5060 sip.example.com.", 10, "10 5 5060 sip.example.com."},
+		{"SRV", "5 5060 sip.example.com.", 0, "0 5 5060 sip.example.com."},
 		{"TXT", "unquoted", 0, `"unquoted"`},
 		{"TXT", `"already quoted"`, 0, `"already quoted"`},
 		{"A", "192.0.2.1", 0, "192.0.2.1"},

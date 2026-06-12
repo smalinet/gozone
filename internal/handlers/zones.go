@@ -178,9 +178,17 @@ func (h *Handler) CreateZone(w http.ResponseWriter, r *http.Request) {
 				if vars["ZONE"] == "" {
 					vars["ZONE"] = zone.Name
 				}
-				rrsets := h.substituteTemplateRecords(zone.ID, records, vars)
-				if err := h.PDNS.CreateRecords(r.Context(), zone.ID, rrsets); err != nil {
-					logger.Error("failed to apply template records", "zone_id", zone.ID, "error", err)
+				rrsets, err := h.substituteTemplateRecords(zone.ID, records, vars)
+				if err == nil {
+					err = h.PDNS.CreateRecords(r.Context(), zone.ID, rrsets)
+				}
+				if err != nil {
+					// The zone was created; only the template could not be
+					// applied. Surface it instead of redirecting to success.
+					h.renderInternalError(w, r,
+						fmt.Sprintf("Zone %s was created, but applying the template failed. Add records manually.", zone.Name),
+						err)
+					return
 				}
 			}
 		}

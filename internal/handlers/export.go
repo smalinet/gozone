@@ -124,7 +124,7 @@ func (h *Handler) exportBind(w http.ResponseWriter, zone *models.Zone, records [
 
 func formatRecordContent(rtype, content string, priority int) string {
 	switch rtype {
-	case "MX":
+	case "MX", "SRV":
 		return fmt.Sprintf("%d %s", priority, content)
 	case "TXT":
 		if !strings.HasPrefix(content, `"`) && !strings.HasPrefix(content, `'`) {
