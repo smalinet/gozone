@@ -61,14 +61,15 @@ func sectionFromTemplate(name string) string {
 	return ""
 }
 
-// render executes a template and automatically injects the CSRF token,
-// authenticated user, admin flag, and active section into the data map.
-// renderInternalError logs the error server-side and shows a generic message to the user.
+// renderInternalError logs the error server-side and shows a generic message to
+// the user with HTTP 500, since these are server-side failures.
 func (h *Handler) renderInternalError(w http.ResponseWriter, r *http.Request, msg string, err error) {
 	logger.Error(msg, "error", err)
-	h.renderError(w, r, msg)
+	h.renderErrorStatus(w, r, http.StatusInternalServerError, msg)
 }
 
+// render executes a template and automatically injects the CSRF token,
+// authenticated user, admin flag, and active section into the data map.
 func (h *Handler) render(w http.ResponseWriter, r *http.Request, name string, data map[string]interface{}) {
 	if data == nil {
 		data = make(map[string]interface{})

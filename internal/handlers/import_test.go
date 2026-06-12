@@ -204,6 +204,70 @@ $INCLUDE /etc/bind/zones/other.zone
 	}
 }
 
+func TestParseBindZone_OwnerInheritance(t *testing.T) {
+	// The two NS lines begin with whitespace and omit the owner: per RFC 1035
+	// they inherit the previous owner ("@" -> the zone apex), rather than being
+	// parsed as a record named "IN".
+	data := []byte(`$ORIGIN example.com.
+@ IN SOA ns1.example.com. hostmaster.example.com. 1 10800 3600 604800 3600
+  IN NS ns1.example.com.
+  IN NS ns2.example.com.
+www IN A 192.0.2.1`)
+
+	rrsets, err := parseBindZone(data, "example.com.")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var ns *models.RRSet
+	for i := range rrsets {
+		// No record may have an empty owner name.
+		if rrsets[i].Name == "" {
+			t.Errorf("rrset with empty name: %+v", rrsets[i])
+		}
+		// No record may be named after a class token.
+		if rrsets[i].Name == "IN.example.com." || rrsets[i].Type == "" {
+			t.Errorf("class token leaked into a record: %+v", rrsets[i])
+		}
+		if rrsets[i].Type == "NS" {
+			ns = &rrsets[i]
+		}
+	}
+
+	if ns == nil {
+		t.Fatal("no NS rrset found")
+	}
+	if ns.Name != "example.com." {
+		t.Errorf("NS owner = %q, want %q", ns.Name, "example.com.")
+	}
+	if len(ns.Records) != 2 {
+		t.Errorf("expected 2 inherited NS records, got %d", len(ns.Records))
+	}
+}
+
+func TestParseBindZone_ShortLineNoPanic(t *testing.T) {
+	// "www 300" is name + TTL with no class/type: idx runs past the token list.
+	// The class check used to read tokens[idx] out of bounds (operator
+	// precedence bug) and panic. Parsing must now complete without panicking.
+	data := []byte(`$ORIGIN example.com.
+www 300
+@ IN NS ns1.example.com.`)
+
+	rrsets, err := parseBindZone(data, "example.com.")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var hasNS bool
+	for _, rr := range rrsets {
+		if rr.Type == "NS" {
+			hasNS = true
+		}
+	}
+	if !hasNS {
+		t.Errorf("expected the valid NS record to be parsed, got %+v", rrsets)
+	}
+}
+
 func TestParseCSVZone_TXT_Quoting(t *testing.T) {
 	input := `name,type,content,ttl,priority,disabled
 txt.example.com.,TXT,v=DMARC1; p=quarantine,3600,0,false

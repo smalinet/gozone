@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -130,13 +131,10 @@ func parseBindZone(data []byte, zoneID string) ([]models.RRSet, error) {
 
 	lines := normalizeBindLines(string(data))
 	raw := make([]bindRecord, 0)
+	lastOwner := "" // owner of the previous record, for RFC 1035 inheritance
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
+	for _, bl := range lines {
+		line := bl.text
 		upper := strings.ToUpper(line)
 
 		if strings.HasPrefix(upper, "$ORIGIN ") {
@@ -157,6 +155,18 @@ func parseBindZone(data []byte, zoneID string) ([]models.RRSet, error) {
 			continue
 		}
 
+		// RFC 1035: a line starting with whitespace omits the owner name and
+		// reuses the previous record's owner. Prepend it so parseBindLine,
+		// which always expects an owner as the first token, stays simple.
+		if bl.inheritsOwner {
+			if lastOwner == "" {
+				continue
+			}
+			line = lastOwner + " " + line
+		} else if f := strings.Fields(line); len(f) > 0 {
+			lastOwner = f[0]
+		}
+
 		rec, err := parseBindLine(line, origin, defaultTTL)
 		if err != nil {
 			continue
@@ -167,16 +177,27 @@ func parseBindZone(data []byte, zoneID string) ([]models.RRSet, error) {
 	return groupBindRecords(raw), nil
 }
 
-func normalizeBindLines(input string) []string {
+// bindLine is one logical zone-file line (paren continuations joined, comments
+// stripped). inheritsOwner records whether its first physical line began with
+// whitespace, i.e. it omits the owner name per RFC 1035.
+type bindLine struct {
+	text          string
+	inheritsOwner bool
+}
+
+func normalizeBindLines(input string) []bindLine {
 	input = strings.ReplaceAll(input, "\r\n", "\n")
 	lines := strings.Split(input, "\n")
 
-	result := make([]string, 0)
+	result := make([]bindLine, 0)
 	inParen := false
 	current := ""
+	currentInherits := false
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+	for _, raw := range lines {
+		// Detect owner inheritance before trimming, on the original line.
+		leadingBlank := raw != "" && (raw[0] == ' ' || raw[0] == '\t')
+		line := strings.TrimSpace(raw)
 
 		commentIdx := -1
 		inQuote := false
@@ -194,15 +215,13 @@ func normalizeBindLines(input string) []string {
 		}
 		line = strings.TrimSpace(line)
 
-		if line == "" && !inParen {
-			continue
-		}
-		if line == "" && inParen {
+		if line == "" {
 			continue
 		}
 
 		if !inParen {
 			current = line
+			currentInherits = leadingBlank
 		} else {
 			current += " " + line
 		}
@@ -223,24 +242,29 @@ func normalizeBindLines(input string) []string {
 		if !inParen {
 			current = strings.TrimSpace(current)
 			if current != "" {
-				result = append(result, current)
+				result = append(result, bindLine{text: current, inheritsOwner: currentInherits})
 			}
 			current = ""
+			currentInherits = false
 		}
 	}
 
 	if inParen && strings.TrimSpace(current) != "" {
 		current = strings.ReplaceAll(current, ")", "")
-		result = append(result, strings.TrimSpace(current))
+		result = append(result, bindLine{text: strings.TrimSpace(current), inheritsOwner: currentInherits})
 	}
 
 	return result
 }
 
+// errSkipBindLine marks a line that carries no usable record and must be
+// dropped by the caller rather than turned into an empty (Name=="") RRSet.
+var errSkipBindLine = errors.New("bind line has no record")
+
 func parseBindLine(line, origin string, defaultTTL int) (bindRecord, error) {
 	tokens := tokenizeBindLine(line)
 	if len(tokens) < 2 {
-		return bindRecord{}, nil
+		return bindRecord{}, errSkipBindLine
 	}
 
 	idx := 0
@@ -255,7 +279,7 @@ func parseBindLine(line, origin string, defaultTTL int) (bindRecord, error) {
 		idx++
 	}
 
-	if idx < len(tokens) && strings.ToUpper(tokens[idx]) == "IN" || strings.ToUpper(tokens[idx]) == "CH" || strings.ToUpper(tokens[idx]) == "HS" {
+	if idx < len(tokens) && (strings.ToUpper(tokens[idx]) == "IN" || strings.ToUpper(tokens[idx]) == "CH" || strings.ToUpper(tokens[idx]) == "HS") {
 		idx++
 	} else if ttl == 0 && idx < len(tokens) {
 		ttlNum, err := strconv.Atoi(tokens[idx])
@@ -266,7 +290,7 @@ func parseBindLine(line, origin string, defaultTTL int) (bindRecord, error) {
 	}
 
 	if idx >= len(tokens) {
-		return bindRecord{}, nil
+		return bindRecord{}, errSkipBindLine
 	}
 	rtype := strings.ToUpper(tokens[idx])
 	idx++

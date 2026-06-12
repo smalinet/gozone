@@ -163,7 +163,7 @@ func (h *Handler) EditUserPage(w http.ResponseWriter, r *http.Request) {
 	target.Enabled = enabled == 1
 
 	if err != nil {
-		h.renderError(w, r, "User not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "User not found")
 		return
 	}
 

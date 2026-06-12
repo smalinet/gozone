@@ -113,8 +113,8 @@ func TestCreateTemplate_EmptyName(t *testing.T) {
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	h.CreateTemplate(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Template name is required") {
 		t.Errorf("expected error message, got %s", w.Body.String())
@@ -133,8 +133,8 @@ func TestCreateTemplate_DuplicateName(t *testing.T) {
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	h.CreateTemplate(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "already exists") {
 		t.Errorf("expected duplicate name error, got %s", w.Body.String())
@@ -174,8 +174,8 @@ func TestEditTemplatePage_NotFound(t *testing.T) {
 	r = withUserContext(r, user)
 	h.EditTemplatePage(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 with error, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Template not found") {
 		t.Errorf("expected 'Template not found', got %s", w.Body.String())

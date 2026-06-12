@@ -519,7 +519,19 @@ func (h *Handler) getZoneActivityLogs(zoneID string) []models.ActivityLog {
 	return logs
 }
 
+// renderError shows the error page with HTTP 400 (Bad Request), the right
+// status for the validation/bad-input cases that make up most callers. Use
+// renderErrorStatus for not-found (404) or other statuses.
 func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, msg string) {
+	h.renderErrorStatus(w, r, http.StatusBadRequest, msg)
+}
+
+// renderErrorStatus writes the given HTTP status and renders the error page.
+func (h *Handler) renderErrorStatus(w http.ResponseWriter, r *http.Request, status int, msg string) {
+	// Set Content-Type explicitly: once WriteHeader is called the body write no
+	// longer triggers content sniffing.
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	data := map[string]interface{}{
 		"Title":   "Error - GoZone",
 		"Message": msg,

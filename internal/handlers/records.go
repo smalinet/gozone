@@ -19,7 +19,7 @@ func (h *Handler) CreateRecordPage(w http.ResponseWriter, r *http.Request) {
 
 	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
-		h.renderError(w, r, "Zone not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Zone not found")
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 
 	zone, err := h.PDNS.GetZone(r.Context(), zoneID)
 	if err != nil {
-		h.renderError(w, r, "Zone not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Zone not found")
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *Handler) EditRecordPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if targetRRSet == nil {
-		h.renderError(w, r, "Record not found")
+		h.renderErrorStatus(w, r, http.StatusNotFound, "Record not found")
 		return
 	}
 
@@ -368,9 +368,13 @@ func (h *Handler) BatchCreateRecords(w http.ResponseWriter, r *http.Request) {
 		content    string
 	}
 
+	// name/type/content are parallel form arrays; iterate only over indices
+	// present in all three so a mismatched POST can't index out of range.
+	count := min(len(names), len(types), len(contents))
+
 	var rrsets []models.RRSet
 	var logEntries []logEntry
-	for i := 0; i < len(names); i++ {
+	for i := 0; i < count; i++ {
 		name := strings.TrimSpace(names[i])
 		recordType := strings.TrimSpace(types[i])
 		content := strings.TrimSpace(contents[i])

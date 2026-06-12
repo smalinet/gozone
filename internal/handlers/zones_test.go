@@ -140,8 +140,8 @@ func TestCreateZone_EmptyName(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.CreateZone(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (render error), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 }
 
@@ -293,8 +293,8 @@ func TestRectifyZone_PDNSError(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.RectifyZone(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Rectify failed") {
 		t.Error("expected 'Rectify failed' in error page")
@@ -353,8 +353,8 @@ func TestNotifyZone_PDNSError(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.NotifyZone(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Notify failed") {
 		t.Error("expected 'Notify failed' in error page")
@@ -443,8 +443,8 @@ func TestCreateMetadata_EmptyKind(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.CreateMetadata(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Metadata kind is required") {
 		t.Error("expected 'Metadata kind is required' in error page")
@@ -464,8 +464,8 @@ func TestCreateMetadata_EmptyValues(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.CreateMetadata(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "At least one value is required") {
 		t.Error("expected 'At least one value is required' in error page")
@@ -532,8 +532,8 @@ func TestDeleteMetadata_EmptyKind(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.DeleteMetadata(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Metadata kind is required") {
 		t.Error("expected 'Metadata kind is required' in error page")
@@ -574,8 +574,8 @@ func TestCreateMetadata_PDNSError(t *testing.T) {
 	r = r.WithContext(ctx)
 	h.CreateMetadata(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200 (error page), got %d", w.Code)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "Failed to set metadata") {
 		t.Error("expected 'Failed to set metadata' in error page")
